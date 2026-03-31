@@ -25,7 +25,19 @@ const App = (() => {
 
         document.getElementById('settings-btn').addEventListener('click', showSettings);
 
+        // 自動同期マージ後に画面を更新するフック
+        window.appRefreshData = () => {
+            if (currentScreen === 'home' || currentScreen === 'confirm') {
+                switchScreen(currentScreen);
+            }
+        };
+
         switchScreen('home');
+
+        // アプリ起動時のバックグラウンド自動同期
+        if (window.DriveSync && window.DriveSync.autoSync) {
+            window.DriveSync.autoSync();
+        }
     }
 
     // --- 画面切り替え ---
@@ -165,12 +177,12 @@ const App = (() => {
                         <input type="text" id="edit-meaning">
                     </div>
                     <div class="input-group">
-                        <label>同義語（カンマ区切り）</label>
-                        <input type="text" id="edit-synonyms" placeholder="例: coherence, uniformity">
+                        <label>同義語（語句(意味), ...）</label>
+                        <input type="text" id="edit-synonyms" placeholder="例: coherence(一貫性), uniformity(統一)">
                     </div>
                     <div class="input-group">
-                        <label>対義語（カンマ区切り）</label>
-                        <input type="text" id="edit-antonyms" placeholder="例: inconsistency">
+                        <label>対義語（語句(意味), ...）</label>
+                        <input type="text" id="edit-antonyms" placeholder="例: inconsistency(不一致)">
                     </div>
                     <div class="input-group">
                         <label>派生語・品詞変化</label>
@@ -178,7 +190,7 @@ const App = (() => {
                     </div>
                     <div class="input-group">
                         <label>例文</label>
-                        <textarea id="edit-example" rows="2" placeholder="例: Consistency is the key to success."></textarea>
+                        <textarea id="edit-example" rows="2" placeholder="英語の例文&#10;(日本語訳)※改行または括弧で区切る"></textarea>
                     </div>
                     <div class="input-group">
                         <label>分類</label>
@@ -210,11 +222,12 @@ const App = (() => {
             showLoading(true);
             try {
                 const details = await AIManager.fetchWordDetails(term);
+                const formatPairs = (arr) => arr.map(a => `${a.word}(${a.ja})`).join(', ');
                 document.getElementById('edit-meaning').value = details.meaning;
-                document.getElementById('edit-synonyms').value = details.synonyms.join(', ');
-                document.getElementById('edit-antonyms').value = details.antonyms.join(', ');
+                document.getElementById('edit-synonyms').value = formatPairs(details.synonyms);
+                document.getElementById('edit-antonyms').value = formatPairs(details.antonyms);
                 document.getElementById('edit-derivatives').value = details.derivatives;
-                document.getElementById('edit-example').value = details.example;
+                document.getElementById('edit-example').value = details.example ? `${details.example.en}\n(${details.example.ja})` : '';
 
                 // 熟語かどうかを自動判定
                 if (term.includes(' ')) {
@@ -236,15 +249,41 @@ const App = (() => {
 
             const synonymsStr = document.getElementById('edit-synonyms').value;
             const antonymsStr = document.getElementById('edit-antonyms').value;
+            const exampleStr = document.getElementById('edit-example').value;
+
+            const parsePairs = (str) => {
+                if (!str.trim()) return [];
+                return str.split(',').map(s => {
+                    const match = s.trim().match(/^(.*?)(?:\((.*?)\))?$/);
+                    return match ? { word: match[1].trim(), ja: match[2] ? match[2].trim() : '' } : null;
+                }).filter(Boolean);
+            };
+
+            const parseExample = (str) => {
+                const s = str.trim();
+                if (!s) return null;
+                const lines = s.split('\n');
+                let en = lines[0].trim();
+                let ja = lines.length > 1 ? lines[1].replace(/^\(|\)$/g, '').trim() : '';
+                // 1行で "English (日本語)" のように書かれた場合のフォールバック処理
+                if (lines.length === 1 && en.includes('(')) {
+                    const match = en.match(/^(.*?)\((.*?)\)$/);
+                    if (match) {
+                        en = match[1].trim();
+                        ja = match[2].trim();
+                    }
+                }
+                return { en, ja };
+            };
 
             const item = {
                 type: document.getElementById('edit-type').value,
                 term: term,
                 meaning: document.getElementById('edit-meaning').value,
-                synonyms: synonymsStr ? synonymsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
-                antonyms: antonymsStr ? antonymsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
+                synonyms: parsePairs(synonymsStr),
+                antonyms: parsePairs(antonymsStr),
                 derivatives: document.getElementById('edit-derivatives').value,
-                example: document.getElementById('edit-example').value
+                example: parseExample(exampleStr)
             };
 
             StorageManager.saveItem(item);
@@ -361,9 +400,17 @@ const App = (() => {
             return;
         }
 
-        const synText = item.synonyms.length > 0 ? item.synonyms.join(', ') : '—';
-        const antText = item.antonyms.length > 0 ? item.antonyms.join(', ') : '—';
-        const safeExample = escapeQuotes(item.example || '');
+        const renderPairs = (pairs) => {
+            if (!pairs || pairs.length === 0) return '—';
+            return pairs.map(p => {
+                if (typeof p === 'string') return escapeHtml(p);
+                if (!p.ja) return escapeHtml(p.word);
+                return `<div class="word-pair"><span class="en-part">${escapeHtml(p.word)}</span><span class="ja-part">${escapeHtml(p.ja)}</span></div>`;
+            }).join('');
+        };
+
+        const synHtml = renderPairs(item.synonyms);
+        const antHtml = renderPairs(item.antonyms);
 
         container.innerHTML = `
             <div class="flashcard" id="card">
@@ -378,12 +425,15 @@ const App = (() => {
                     <div class="flashcard-back">
                         <div class="word-meaning">${escapeHtml(item.meaning)}</div>
                         <div class="detail-label">同義語</div>
-                        <div class="word-detail">${escapeHtml(synText)}</div>
+                        <div class="word-detail">${synHtml}</div>
                         <div class="detail-label">対義語</div>
-                        <div class="word-detail">${escapeHtml(antText)}</div>
+                        <div class="word-detail">${antHtml}</div>
                         ${item.example ? `
                             <div class="detail-label">例文</div>
-                            <div class="word-example">${escapeHtml(item.example)}</div>
+                            <div class="word-example" style="display:flex; flex-direction:column; gap:6px;">
+                                <div class="en-example">${escapeHtml(typeof item.example === 'string' ? item.example : item.example.en)}</div>
+                                ${typeof item.example === 'object' && item.example.ja ? `<div class="ja-example">${escapeHtml(item.example.ja)}</div>` : ''}
+                            </div>
                             <button class="audio-btn mt-8" id="play-example-btn">
                                 <i class="fas fa-volume-up"></i>
                             </button>
@@ -420,7 +470,8 @@ const App = (() => {
         if (playExampleBtn) {
             playExampleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                AudioManager.play(item.example);
+                const exText = typeof item.example === 'string' ? item.example : item.example.en;
+                AudioManager.play(exText);
             });
         }
 
@@ -691,27 +742,27 @@ const App = (() => {
             </div>
 
             <div class="settings-section">
-                <h3><i class="fab fa-google-drive"></i> Google Drive 同期</h3>
+                <h3><i class="fab fa-google-drive"></i> クラウド自動同期 (Drive)</h3>
                 <div class="card" style="animation-delay: 0.06s;">
+                    <p class="text-xs text-muted mb-12" style="line-height: 1.4;">
+                        <i class="fas fa-magic"></i> URLを設定すると、以降は学習や単語登録のたびに<b>裏側で全自動で端末間のデータ統合（マージ）</b>が行われます。
+                    </p>
                     <div class="input-group">
                         <label>Apps Script URL</label>
                         <input type="text" id="settings-script-url" value="${escapeHtml(DriveSync.getScriptUrl())}" placeholder="Google Apps ScriptのデプロイURL">
                     </div>
                     <button id="save-script-url-btn" class="btn-outline mb-12" style="width:100%;">
-                        <i class="fas fa-link"></i> URLを保存
+                        <i class="fas fa-link"></i> URLを保存して自動同期を有効化
                     </button>
-                    <p class="text-xs text-muted mb-12">最終同期: ${DriveSync.formatLastSync()}</p>
+                    <p class="text-xs text-muted mb-12">現在の最終同期: ${DriveSync.formatLastSync()}</p>
                     <div class="flex-row mb-12">
                         <button id="backup-btn" class="btn-primary flex-1" style="font-size:0.85rem;">
-                            <i class="fas fa-cloud-arrow-up"></i> バックアップ
+                            <i class="fas fa-cloud-arrow-up"></i> 手動同期送信
                         </button>
                         <button id="restore-btn" class="btn-outline flex-1" style="font-size:0.85rem;">
-                            <i class="fas fa-cloud-arrow-down"></i> 復元
+                            <i class="fas fa-cloud-arrow-down"></i> 手動ダウンロード
                         </button>
                     </div>
-                    <p class="text-xs text-muted">
-                        設定手順は<a href="https://script.google.com" target="_blank" rel="noopener" style="color:var(--accent);">Google Apps Script</a>でプロジェクトを作成し、コードを貼り付けてデプロイしてください。
-                    </p>
                 </div>
             </div>
 

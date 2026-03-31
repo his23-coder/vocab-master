@@ -342,6 +342,18 @@ select {
     color: var(--text-3); margin-top: 8px; margin-bottom: 2px;
 }
 
+/* -- Bilingual Pairs -- */
+.word-pair {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.word-pair:last-child { border-bottom: none; }
+.en-part { font-weight: 500; color: var(--text-2); }
+.ja-part { font-size: 0.75rem; color: var(--text-3); text-align: right; margin-left: 12px; }
+
+.en-example { color: var(--text-2); font-weight: 500; }
+.ja-example { font-size: 0.75rem; color: var(--text-3); font-style: normal; margin-top: 2px; }
+
 /* ---- Audio Button ---- */
 .audio-btn {
     width: 34px; height: 34px; min-width: 34px;
@@ -566,12 +578,30 @@ const StorageManager = (() => {
 
     // 旧データ形式からのマイグレーション
     function migrateItem(item) {
-        // synonyms が文字列の場合は配列に変換
+        // synonyms が文字列の場合は配列に変換（旧仕様1）
         if (typeof item.synonyms === 'string') {
             const parts = item.synonyms.split('/').map(s => s.trim());
             item.synonyms = parts[0] ? parts[0].split(',').map(s => s.trim()).filter(Boolean) : [];
             item.antonyms = parts[1] ? parts[1].split(',').map(s => s.trim()).filter(Boolean) : [];
         }
+
+        // 文字列の配列を {word, ja} 形式にマイグレーション（新仕様・対訳対応）
+        if (Array.isArray(item.synonyms) && item.synonyms.length > 0 && typeof item.synonyms[0] === 'string') {
+            item.synonyms = item.synonyms.map(s => ({ word: s, ja: '' }));
+        }
+        if (Array.isArray(item.antonyms) && item.antonyms.length > 0 && typeof item.antonyms[0] === 'string') {
+            item.antonyms = item.antonyms.map(s => ({ word: s, ja: '' }));
+        }
+        
+        // 例文を {en, ja} 形式にマイグレーション（新仕様・対訳対応）
+        if (typeof item.example === 'string') {
+            if (item.example.trim()) {
+                item.example = { en: item.example, ja: '' };
+            } else {
+                item.example = null;
+            }
+        }
+
         // 新フィールドのデフォルト値を保証
         if (!Array.isArray(item.synonyms)) item.synonyms = [];
         if (!Array.isArray(item.antonyms)) item.antonyms = [];
@@ -580,6 +610,7 @@ const StorageManager = (() => {
         if (item.correctCount === undefined) item.correctCount = 0;
         if (item.reviewStage === undefined) item.reviewStage = 0;
         if (item.isWeak === undefined) item.isWeak = false;
+        if (item.updatedAt === undefined) item.updatedAt = Date.now();
         return item;
     }
 
@@ -587,6 +618,7 @@ const StorageManager = (() => {
         const items = getAllItems();
         item.id = item.id || generateId();
         item.createdAt = item.createdAt || new Date().toISOString();
+        item.updatedAt = Date.now();
         item.isWeak = item.isWeak || false;
         item.lastStudiedAt = item.lastStudiedAt || null;
         item.nextReviewAt = item.nextReviewAt || null;
@@ -623,6 +655,7 @@ const StorageManager = (() => {
         const item = items.find(i => i.id === id);
         if (item) {
             item.isWeak = isWeak;
+            item.updatedAt = Date.now();
             _persist(items);
         }
     }
@@ -658,6 +691,7 @@ const StorageManager = (() => {
 
         item.lastStudiedAt = new Date().toISOString();
         item.correctCount = (item.correctCount || 0) + 1;
+        item.updatedAt = Date.now();
 
         const stage = item.reviewStage || 0;
         if (stage < REVIEW_INTERVALS.length) {
@@ -688,6 +722,7 @@ const StorageManager = (() => {
         item.correctCount = 0;
         item.lastStudiedAt = new Date().toISOString();
         item.nextReviewAt = null;
+        item.updatedAt = Date.now();
 
         _persist(items);
         return item;
@@ -789,6 +824,33 @@ const StorageManager = (() => {
 
     function _persist(items) {
         localStorage.setItem(KEYS.ITEMS, JSON.stringify(items));
+        // データ変更時に自動バックアップをトリガー
+        if (window.DriveSync && window.DriveSync.autoBackup) {
+            window.DriveSync.autoBackup();
+        }
+    }
+
+    // --- 同期用マージ ---
+    function mergeImportedItems(importedItems) {
+        const localItems = getAllItems();
+        const localMap = new Map(localItems.map(i => [i.id, i]));
+        let changed = false;
+
+        importedItems.forEach(cloudItem => {
+            const localItem = localMap.get(cloudItem.id);
+            // ローカルに無い、またはクラウド側の方が新しければ採用
+            if (!localItem || (cloudItem.updatedAt || 0) > (localItem.updatedAt || 0)) {
+                localMap.set(cloudItem.id, cloudItem);
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            const newItems = Array.from(localMap.values());
+            localStorage.setItem(KEYS.ITEMS, JSON.stringify(newItems));
+            return true;
+        }
+        return false;
     }
 
     return {
@@ -798,7 +860,8 @@ const StorageManager = (() => {
         recordCorrect, recordIncorrect, getDueItems,
         getStats,
         getSettings, saveSettings,
-        exportData, importData, clearAllData
+        exportData, importData, clearAllData,
+        mergeImportedItems
     };
 })();
 </script>
@@ -872,16 +935,16 @@ const AIManager = (() => {
             JSON形式:
             {
                 "meaning": "日本語での主な意味（簡潔に）",
-                "synonyms": ["同義語1", "同義語2", "同義語3"],
-                "antonyms": ["対義語1", "対義語2"],
+                "synonyms": [{"word": "同義語1", "ja": "意味1"}, {"word": "同義語2", "ja": "意味2"}],
+                "antonyms": [{"word": "対義語1", "ja": "意味1"}, {"word": "対義語2", "ja": "意味2"}],
                 "derivatives": "派生語や品詞変化（例: 名詞形:xxx, 形容詞形:yyy, 副詞形:zzz）",
-                "example": "その語句を使った、学習に適した自然な英語の例文"
+                "example": {"en": "その語句を使った、学習に適した自然な英語の例文", "ja": "その例文の自然な日本語訳"}
             }
 
             注意:
-            - synonyms と antonyms は必ず配列にしてください
-            - 同義語・対義語がない場合は空の配列 [] にしてください
-            - 例文は英語で、実用的で自然な文にしてください
+            - synonyms と antonyms は必ずオブジェクトの配列にしてください。該当がない場合は空の配列 [] にしてください。
+            - example は必ずオブジェクトにしてください。見つからない場合は null を指定してください。
+            - 例文は英語で実用的で自然な文にし、正確な対訳をつけてください。
         `;
 
         // モデル候補のリストを取得（すでに成功したモデルがあればそれを最優先）
@@ -919,7 +982,7 @@ const AIManager = (() => {
                     synonyms: Array.isArray(parsed.synonyms) ? parsed.synonyms : [],
                     antonyms: Array.isArray(parsed.antonyms) ? parsed.antonyms : [],
                     derivatives: parsed.derivatives || '',
-                    example: parsed.example || ''
+                    example: parsed.example || null
                 };
             } catch (e) {
                 lastError = e;
@@ -1084,10 +1147,77 @@ const DriveSync = (() => {
         return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+    // --- 自動同期ロジック ---
+    let backupTimeout = null;
+
+    /**
+     * データ変更時に呼ばれる（数秒後に裏でバックアップを実行）
+     */
+    function autoBackup() {
+        const url = getScriptUrl();
+        if (!url) return; // URL未設定時は何もしない
+
+        if (backupTimeout) clearTimeout(backupTimeout);
+        backupTimeout = setTimeout(async () => {
+            try {
+                const data = StorageManager.exportData();
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: data,
+                    mode: 'no-cors'
+                });
+                
+                const config = getConfig();
+                config.lastSync = new Date().toISOString();
+                saveConfig(config);
+                console.log('[Sync] 自動バックアップ完了');
+            } catch (e) {
+                console.error('[Sync] 自動バックアップ失敗', e);
+            }
+        }, 5000); // 連続保存を防ぐため、5秒後に実行
+    }
+
+    /**
+     * アプリ起動時に呼ばれる（クラウドのデータを取得し、マージする）
+     */
+    async function autoSync() {
+        const url = getScriptUrl();
+        if (!url) return; // URL未設定時は何もしない
+
+        try {
+            const response = await fetch(url + '?action=load', { method: 'GET' });
+            if (!response.ok) return;
+
+            const jsonStr = await response.text();
+            if (!jsonStr || jsonStr === 'null' || jsonStr === '{}') return;
+
+            const data = JSON.parse(jsonStr);
+            if (data.items && Array.isArray(data.items)) {
+                // アイテムのマージ処理
+                const merged = StorageManager.mergeImportedItems(data.items);
+                if (merged) {
+                    console.log('[Sync] 新しいデータをクラウドから統合しました（マージ成功）');
+                    // マージしたので、最新状態をローカル画面に反映させる必要がある
+                    if (window.appRefreshData) window.appRefreshData();
+                } else {
+                    console.log('[Sync] ローカルのデータは最新です');
+                }
+            }
+            
+            const config = getConfig();
+            config.lastSync = new Date().toISOString();
+            saveConfig(config);
+
+        } catch (e) {
+            console.error('[Sync] 自動同期(フェッチ)失敗:', e);
+        }
+    }
+
     return {
         getConfig, saveConfig, getScriptUrl, setScriptUrl,
         getLastSync, formatLastSync,
-        backup, restore
+        backup, restore, autoBackup, autoSync
     };
 })();
 </script>
@@ -1118,7 +1248,19 @@ const App = (() => {
 
         document.getElementById('settings-btn').addEventListener('click', showSettings);
 
+        // 自動同期マージ後に画面を更新するフック
+        window.appRefreshData = () => {
+            if (currentScreen === 'home' || currentScreen === 'confirm') {
+                switchScreen(currentScreen);
+            }
+        };
+
         switchScreen('home');
+
+        // アプリ起動時のバックグラウンド自動同期
+        if (window.DriveSync && window.DriveSync.autoSync) {
+            window.DriveSync.autoSync();
+        }
     }
 
     // --- 画面切り替え ---
@@ -1258,12 +1400,12 @@ const App = (() => {
                         <input type="text" id="edit-meaning">
                     </div>
                     <div class="input-group">
-                        <label>同義語（カンマ区切り）</label>
-                        <input type="text" id="edit-synonyms" placeholder="例: coherence, uniformity">
+                        <label>同義語（語句(意味), ...）</label>
+                        <input type="text" id="edit-synonyms" placeholder="例: coherence(一貫性), uniformity(統一)">
                     </div>
                     <div class="input-group">
-                        <label>対義語（カンマ区切り）</label>
-                        <input type="text" id="edit-antonyms" placeholder="例: inconsistency">
+                        <label>対義語（語句(意味), ...）</label>
+                        <input type="text" id="edit-antonyms" placeholder="例: inconsistency(不一致)">
                     </div>
                     <div class="input-group">
                         <label>派生語・品詞変化</label>
@@ -1271,7 +1413,7 @@ const App = (() => {
                     </div>
                     <div class="input-group">
                         <label>例文</label>
-                        <textarea id="edit-example" rows="2" placeholder="例: Consistency is the key to success."></textarea>
+                        <textarea id="edit-example" rows="2" placeholder="英語の例文&#10;(日本語訳)※改行または括弧で区切る"></textarea>
                     </div>
                     <div class="input-group">
                         <label>分類</label>
@@ -1303,11 +1445,12 @@ const App = (() => {
             showLoading(true);
             try {
                 const details = await AIManager.fetchWordDetails(term);
+                const formatPairs = (arr) => arr.map(a => `${a.word}(${a.ja})`).join(', ');
                 document.getElementById('edit-meaning').value = details.meaning;
-                document.getElementById('edit-synonyms').value = details.synonyms.join(', ');
-                document.getElementById('edit-antonyms').value = details.antonyms.join(', ');
+                document.getElementById('edit-synonyms').value = formatPairs(details.synonyms);
+                document.getElementById('edit-antonyms').value = formatPairs(details.antonyms);
                 document.getElementById('edit-derivatives').value = details.derivatives;
-                document.getElementById('edit-example').value = details.example;
+                document.getElementById('edit-example').value = details.example ? `${details.example.en}\n(${details.example.ja})` : '';
 
                 // 熟語かどうかを自動判定
                 if (term.includes(' ')) {
@@ -1329,15 +1472,41 @@ const App = (() => {
 
             const synonymsStr = document.getElementById('edit-synonyms').value;
             const antonymsStr = document.getElementById('edit-antonyms').value;
+            const exampleStr = document.getElementById('edit-example').value;
+
+            const parsePairs = (str) => {
+                if (!str.trim()) return [];
+                return str.split(',').map(s => {
+                    const match = s.trim().match(/^(.*?)(?:\((.*?)\))?$/);
+                    return match ? { word: match[1].trim(), ja: match[2] ? match[2].trim() : '' } : null;
+                }).filter(Boolean);
+            };
+
+            const parseExample = (str) => {
+                const s = str.trim();
+                if (!s) return null;
+                const lines = s.split('\n');
+                let en = lines[0].trim();
+                let ja = lines.length > 1 ? lines[1].replace(/^\(|\)$/g, '').trim() : '';
+                // 1行で "English (日本語)" のように書かれた場合のフォールバック処理
+                if (lines.length === 1 && en.includes('(')) {
+                    const match = en.match(/^(.*?)\((.*?)\)$/);
+                    if (match) {
+                        en = match[1].trim();
+                        ja = match[2].trim();
+                    }
+                }
+                return { en, ja };
+            };
 
             const item = {
                 type: document.getElementById('edit-type').value,
                 term: term,
                 meaning: document.getElementById('edit-meaning').value,
-                synonyms: synonymsStr ? synonymsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
-                antonyms: antonymsStr ? antonymsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
+                synonyms: parsePairs(synonymsStr),
+                antonyms: parsePairs(antonymsStr),
                 derivatives: document.getElementById('edit-derivatives').value,
-                example: document.getElementById('edit-example').value
+                example: parseExample(exampleStr)
             };
 
             StorageManager.saveItem(item);
@@ -1454,9 +1623,17 @@ const App = (() => {
             return;
         }
 
-        const synText = item.synonyms.length > 0 ? item.synonyms.join(', ') : '—';
-        const antText = item.antonyms.length > 0 ? item.antonyms.join(', ') : '—';
-        const safeExample = escapeQuotes(item.example || '');
+        const renderPairs = (pairs) => {
+            if (!pairs || pairs.length === 0) return '—';
+            return pairs.map(p => {
+                if (typeof p === 'string') return escapeHtml(p);
+                if (!p.ja) return escapeHtml(p.word);
+                return `<div class="word-pair"><span class="en-part">${escapeHtml(p.word)}</span><span class="ja-part">${escapeHtml(p.ja)}</span></div>`;
+            }).join('');
+        };
+
+        const synHtml = renderPairs(item.synonyms);
+        const antHtml = renderPairs(item.antonyms);
 
         container.innerHTML = `
             <div class="flashcard" id="card">
@@ -1471,12 +1648,15 @@ const App = (() => {
                     <div class="flashcard-back">
                         <div class="word-meaning">${escapeHtml(item.meaning)}</div>
                         <div class="detail-label">同義語</div>
-                        <div class="word-detail">${escapeHtml(synText)}</div>
+                        <div class="word-detail">${synHtml}</div>
                         <div class="detail-label">対義語</div>
-                        <div class="word-detail">${escapeHtml(antText)}</div>
+                        <div class="word-detail">${antHtml}</div>
                         ${item.example ? `
                             <div class="detail-label">例文</div>
-                            <div class="word-example">${escapeHtml(item.example)}</div>
+                            <div class="word-example" style="display:flex; flex-direction:column; gap:6px;">
+                                <div class="en-example">${escapeHtml(typeof item.example === 'string' ? item.example : item.example.en)}</div>
+                                ${typeof item.example === 'object' && item.example.ja ? `<div class="ja-example">${escapeHtml(item.example.ja)}</div>` : ''}
+                            </div>
                             <button class="audio-btn mt-8" id="play-example-btn">
                                 <i class="fas fa-volume-up"></i>
                             </button>
@@ -1513,7 +1693,8 @@ const App = (() => {
         if (playExampleBtn) {
             playExampleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                AudioManager.play(item.example);
+                const exText = typeof item.example === 'string' ? item.example : item.example.en;
+                AudioManager.play(exText);
             });
         }
 
@@ -1784,27 +1965,27 @@ const App = (() => {
             </div>
 
             <div class="settings-section">
-                <h3><i class="fab fa-google-drive"></i> Google Drive 同期</h3>
+                <h3><i class="fab fa-google-drive"></i> クラウド自動同期 (Drive)</h3>
                 <div class="card" style="animation-delay: 0.06s;">
+                    <p class="text-xs text-muted mb-12" style="line-height: 1.4;">
+                        <i class="fas fa-magic"></i> URLを設定すると、以降は学習や単語登録のたびに<b>裏側で全自動で端末間のデータ統合（マージ）</b>が行われます。
+                    </p>
                     <div class="input-group">
                         <label>Apps Script URL</label>
                         <input type="text" id="settings-script-url" value="${escapeHtml(DriveSync.getScriptUrl())}" placeholder="Google Apps ScriptのデプロイURL">
                     </div>
                     <button id="save-script-url-btn" class="btn-outline mb-12" style="width:100%;">
-                        <i class="fas fa-link"></i> URLを保存
+                        <i class="fas fa-link"></i> URLを保存して自動同期を有効化
                     </button>
-                    <p class="text-xs text-muted mb-12">最終同期: ${DriveSync.formatLastSync()}</p>
+                    <p class="text-xs text-muted mb-12">現在の最終同期: ${DriveSync.formatLastSync()}</p>
                     <div class="flex-row mb-12">
                         <button id="backup-btn" class="btn-primary flex-1" style="font-size:0.85rem;">
-                            <i class="fas fa-cloud-arrow-up"></i> バックアップ
+                            <i class="fas fa-cloud-arrow-up"></i> 手動同期送信
                         </button>
                         <button id="restore-btn" class="btn-outline flex-1" style="font-size:0.85rem;">
-                            <i class="fas fa-cloud-arrow-down"></i> 復元
+                            <i class="fas fa-cloud-arrow-down"></i> 手動ダウンロード
                         </button>
                     </div>
-                    <p class="text-xs text-muted">
-                        設定手順は<a href="https://script.google.com" target="_blank" rel="noopener" style="color:var(--accent);">Google Apps Script</a>でプロジェクトを作成し、コードを貼り付けてデプロイしてください。
-                    </p>
                 </div>
             </div>
 

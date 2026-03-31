@@ -26,12 +26,30 @@ const StorageManager = (() => {
 
     // 旧データ形式からのマイグレーション
     function migrateItem(item) {
-        // synonyms が文字列の場合は配列に変換
+        // synonyms が文字列の場合は配列に変換（旧仕様1）
         if (typeof item.synonyms === 'string') {
             const parts = item.synonyms.split('/').map(s => s.trim());
             item.synonyms = parts[0] ? parts[0].split(',').map(s => s.trim()).filter(Boolean) : [];
             item.antonyms = parts[1] ? parts[1].split(',').map(s => s.trim()).filter(Boolean) : [];
         }
+
+        // 文字列の配列を {word, ja} 形式にマイグレーション（新仕様・対訳対応）
+        if (Array.isArray(item.synonyms) && item.synonyms.length > 0 && typeof item.synonyms[0] === 'string') {
+            item.synonyms = item.synonyms.map(s => ({ word: s, ja: '' }));
+        }
+        if (Array.isArray(item.antonyms) && item.antonyms.length > 0 && typeof item.antonyms[0] === 'string') {
+            item.antonyms = item.antonyms.map(s => ({ word: s, ja: '' }));
+        }
+        
+        // 例文を {en, ja} 形式にマイグレーション（新仕様・対訳対応）
+        if (typeof item.example === 'string') {
+            if (item.example.trim()) {
+                item.example = { en: item.example, ja: '' };
+            } else {
+                item.example = null;
+            }
+        }
+
         // 新フィールドのデフォルト値を保証
         if (!Array.isArray(item.synonyms)) item.synonyms = [];
         if (!Array.isArray(item.antonyms)) item.antonyms = [];
@@ -40,6 +58,7 @@ const StorageManager = (() => {
         if (item.correctCount === undefined) item.correctCount = 0;
         if (item.reviewStage === undefined) item.reviewStage = 0;
         if (item.isWeak === undefined) item.isWeak = false;
+        if (item.updatedAt === undefined) item.updatedAt = Date.now();
         return item;
     }
 
@@ -47,6 +66,7 @@ const StorageManager = (() => {
         const items = getAllItems();
         item.id = item.id || generateId();
         item.createdAt = item.createdAt || new Date().toISOString();
+        item.updatedAt = Date.now();
         item.isWeak = item.isWeak || false;
         item.lastStudiedAt = item.lastStudiedAt || null;
         item.nextReviewAt = item.nextReviewAt || null;
@@ -83,6 +103,7 @@ const StorageManager = (() => {
         const item = items.find(i => i.id === id);
         if (item) {
             item.isWeak = isWeak;
+            item.updatedAt = Date.now();
             _persist(items);
         }
     }
@@ -118,6 +139,7 @@ const StorageManager = (() => {
 
         item.lastStudiedAt = new Date().toISOString();
         item.correctCount = (item.correctCount || 0) + 1;
+        item.updatedAt = Date.now();
 
         const stage = item.reviewStage || 0;
         if (stage < REVIEW_INTERVALS.length) {
@@ -148,6 +170,7 @@ const StorageManager = (() => {
         item.correctCount = 0;
         item.lastStudiedAt = new Date().toISOString();
         item.nextReviewAt = null;
+        item.updatedAt = Date.now();
 
         _persist(items);
         return item;
@@ -249,6 +272,33 @@ const StorageManager = (() => {
 
     function _persist(items) {
         localStorage.setItem(KEYS.ITEMS, JSON.stringify(items));
+        // データ変更時に自動バックアップをトリガー
+        if (window.DriveSync && window.DriveSync.autoBackup) {
+            window.DriveSync.autoBackup();
+        }
+    }
+
+    // --- 同期用マージ ---
+    function mergeImportedItems(importedItems) {
+        const localItems = getAllItems();
+        const localMap = new Map(localItems.map(i => [i.id, i]));
+        let changed = false;
+
+        importedItems.forEach(cloudItem => {
+            const localItem = localMap.get(cloudItem.id);
+            // ローカルに無い、またはクラウド側の方が新しければ採用
+            if (!localItem || (cloudItem.updatedAt || 0) > (localItem.updatedAt || 0)) {
+                localMap.set(cloudItem.id, cloudItem);
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            const newItems = Array.from(localMap.values());
+            localStorage.setItem(KEYS.ITEMS, JSON.stringify(newItems));
+            return true;
+        }
+        return false;
     }
 
     return {
@@ -258,6 +308,7 @@ const StorageManager = (() => {
         recordCorrect, recordIncorrect, getDueItems,
         getStats,
         getSettings, saveSettings,
-        exportData, importData, clearAllData
+        exportData, importData, clearAllData,
+        mergeImportedItems
     };
 })();

@@ -68,16 +68,16 @@ const AIManager = (() => {
             JSON形式:
             {
                 "meaning": "日本語での主な意味（簡潔に）",
-                "synonyms": ["同義語1", "同義語2", "同義語3"],
-                "antonyms": ["対義語1", "対義語2"],
+                "synonyms": [{"word": "同義語1", "ja": "意味1"}, {"word": "同義語2", "ja": "意味2"}],
+                "antonyms": [{"word": "対義語1", "ja": "意味1"}, {"word": "対義語2", "ja": "意味2"}],
                 "derivatives": "派生語や品詞変化（例: 名詞形:xxx, 形容詞形:yyy, 副詞形:zzz）",
-                "example": "その語句を使った、学習に適した自然な英語の例文"
+                "example": {"en": "その語句を使った、学習に適した自然な英語の例文", "ja": "その例文の自然な日本語訳"}
             }
 
             注意:
-            - synonyms と antonyms は必ず配列にしてください
-            - 同義語・対義語がない場合は空の配列 [] にしてください
-            - 例文は英語で、実用的で自然な文にしてください
+            - synonyms と antonyms は必ずオブジェクトの配列にしてください。該当がない場合は空の配列 [] にしてください。
+            - example は必ずオブジェクトにしてください。見つからない場合は null を指定してください。
+            - 例文は英語で実用的で自然な文にし、正確な対訳をつけてください。
         `;
 
         // モデル候補のリストを取得（すでに成功したモデルがあればそれを最優先）
@@ -115,7 +115,7 @@ const AIManager = (() => {
                     synonyms: Array.isArray(parsed.synonyms) ? parsed.synonyms : [],
                     antonyms: Array.isArray(parsed.antonyms) ? parsed.antonyms : [],
                     derivatives: parsed.derivatives || '',
-                    example: parsed.example || ''
+                    example: parsed.example || null
                 };
             } catch (e) {
                 lastError = e;

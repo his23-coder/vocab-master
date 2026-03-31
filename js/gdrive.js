@@ -102,9 +102,76 @@ const DriveSync = (() => {
         return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+    // --- 自動同期ロジック ---
+    let backupTimeout = null;
+
+    /**
+     * データ変更時に呼ばれる（数秒後に裏でバックアップを実行）
+     */
+    function autoBackup() {
+        const url = getScriptUrl();
+        if (!url) return; // URL未設定時は何もしない
+
+        if (backupTimeout) clearTimeout(backupTimeout);
+        backupTimeout = setTimeout(async () => {
+            try {
+                const data = StorageManager.exportData();
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: data,
+                    mode: 'no-cors'
+                });
+                
+                const config = getConfig();
+                config.lastSync = new Date().toISOString();
+                saveConfig(config);
+                console.log('[Sync] 自動バックアップ完了');
+            } catch (e) {
+                console.error('[Sync] 自動バックアップ失敗', e);
+            }
+        }, 5000); // 連続保存を防ぐため、5秒後に実行
+    }
+
+    /**
+     * アプリ起動時に呼ばれる（クラウドのデータを取得し、マージする）
+     */
+    async function autoSync() {
+        const url = getScriptUrl();
+        if (!url) return; // URL未設定時は何もしない
+
+        try {
+            const response = await fetch(url + '?action=load', { method: 'GET' });
+            if (!response.ok) return;
+
+            const jsonStr = await response.text();
+            if (!jsonStr || jsonStr === 'null' || jsonStr === '{}') return;
+
+            const data = JSON.parse(jsonStr);
+            if (data.items && Array.isArray(data.items)) {
+                // アイテムのマージ処理
+                const merged = StorageManager.mergeImportedItems(data.items);
+                if (merged) {
+                    console.log('[Sync] 新しいデータをクラウドから統合しました（マージ成功）');
+                    // マージしたので、最新状態をローカル画面に反映させる必要がある
+                    if (window.appRefreshData) window.appRefreshData();
+                } else {
+                    console.log('[Sync] ローカルのデータは最新です');
+                }
+            }
+            
+            const config = getConfig();
+            config.lastSync = new Date().toISOString();
+            saveConfig(config);
+
+        } catch (e) {
+            console.error('[Sync] 自動同期(フェッチ)失敗:', e);
+        }
+    }
+
     return {
         getConfig, saveConfig, getScriptUrl, setScriptUrl,
         getLastSync, formatLastSync,
-        backup, restore
+        backup, restore, autoBackup, autoSync
     };
 })();

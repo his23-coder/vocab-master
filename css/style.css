@@ -331,6 +331,18 @@ select {
     color: var(--text-3); margin-top: 8px; margin-bottom: 2px;
 }
 
+/* -- Bilingual Pairs -- */
+.word-pair {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.word-pair:last-child { border-bottom: none; }
+.en-part { font-weight: 500; color: var(--text-2); }
+.ja-part { font-size: 0.75rem; color: var(--text-3); text-align: right; margin-left: 12px; }
+
+.en-example { color: var(--text-2); font-weight: 500; }
+.ja-example { font-size: 0.75rem; color: var(--text-3); font-style: normal; margin-top: 2px; }
+
 /* ---- Audio Button ---- */
 .audio-btn {
     width: 34px; height: 34px; min-width: 34px;
