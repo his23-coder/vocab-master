@@ -110,12 +110,42 @@ const AIManager = (() => {
                 // 成功したら、次回から高速化のためにこのモデルを固定で使用する
                 activeModel = model;
 
+                // AIの出力揺れを吸収するノーマライズ処理
+                const normalizePairs = (arr) => {
+                    if (!Array.isArray(arr)) return [];
+                    return arr.map(item => {
+                        if (typeof item === 'string') {
+                            // "word(ja)" 形式のフォールバック
+                            const match = item.match(/^(.*?)(?:\((.*?)\))?$/);
+                            return { 
+                                word: match ? match[1].trim() : item, 
+                                ja: match && match[2] ? match[2].trim() : '' 
+                            };
+                        }
+                        return { 
+                            word: item.word || '', 
+                            ja: item.ja || item.meaning || item.translation || '' 
+                        };
+                    }).filter(item => item.word);
+                };
+
+                const normalizeExample = (ex) => {
+                    if (!ex) return null;
+                    if (typeof ex === 'string') {
+                        return { en: ex, ja: '' };
+                    }
+                    return {
+                        en: ex.en || ex.english || '',
+                        ja: ex.ja || ex.japanese || ex.translation || ''
+                    };
+                };
+
                 return {
                     meaning: parsed.meaning || '',
-                    synonyms: Array.isArray(parsed.synonyms) ? parsed.synonyms : [],
-                    antonyms: Array.isArray(parsed.antonyms) ? parsed.antonyms : [],
+                    synonyms: normalizePairs(parsed.synonyms),
+                    antonyms: normalizePairs(parsed.antonyms),
                     derivatives: parsed.derivatives || '',
-                    example: parsed.example || null
+                    example: normalizeExample(parsed.example)
                 };
             } catch (e) {
                 lastError = e;
