@@ -1,13 +1,14 @@
-const CACHE_NAME = 'vocabmaster-v3';
+const CACHE_NAME = 'vocabmaster-v4';
 const ASSETS = [
-    '/',
-    '/index.html',
-    '/css/style.css',
-    '/js/storage.js',
-    '/js/ai.js',
-    '/js/audio.js',
-    '/js/app.js',
-    '/manifest.json'
+    './',
+    './index.html',
+    './css/style.css',
+    './js/storage.js',
+    './js/ai.js',
+    './js/audio.js',
+    './js/gdrive.js',
+    './js/app.js',
+    './manifest.json'
 ];
 
 self.addEventListener('install', e => {

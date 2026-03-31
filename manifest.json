@@ -2,7 +2,7 @@
     "name": "VocabMaster",
     "short_name": "VocabMaster",
     "description": "忘却曲線で学ぶ英語学習アプリ",
-    "start_url": "/",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#050505",
     "theme_color": "#050505",
