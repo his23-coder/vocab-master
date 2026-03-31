@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050505">
+    <title>VocabMaster</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>/* ============================================
+   VocabMaster — Minimal & Refined Design
+   ============================================ */
+
+:root {
+    --bg: #050505;
+    --bg-card: #111111;
+    --bg-input: #0a0a0a;
+    --bg-hover: #1a1a1a;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-focus: rgba(255, 255, 255, 0.15);
+
+    --text: #f5f5f5;
+    --text-2: #a0a0a0;
+    --text-3: #555555;
+
+    --accent: #7c6aef;
+    --accent-soft: rgba(124, 106, 239, 0.12);
+    --green: #3ecf8e;
+    --green-soft: rgba(62, 207, 142, 0.12);
+    --red: #ef6a6a;
+    --red-soft: rgba(239, 106, 106, 0.12);
+    --amber: #f0b429;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --nav-h: 64px;
+    --header-h: 52px;
+    --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+*, *::before, *::after {
+    margin: 0; padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh; width: 100vw;
+    overflow: hidden;
+}
+
+#app { display: flex; flex-direction: column; height: 100%; }
+
+/* ---- Header ---- */
+header {
+    height: var(--header-h);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+}
+
+.icon-btn {
+    background: none; border: none;
+    color: var(--text-3); font-size: 1.05rem;
+    padding: 6px; cursor: pointer;
+    transition: color 0.15s;
+}
+.icon-btn:active { color: var(--text-2); }
+
+/* ---- Main ---- */
+main {
+    flex: 1; overflow-y: auto;
+    padding-bottom: calc(var(--nav-h) + 16px);
+    -webkit-overflow-scrolling: touch;
+}
+main::-webkit-scrollbar { display: none; }
+
+#screen-container {
+    padding: 16px 18px;
+    max-width: 460px;
+    margin: 0 auto;
+}
+
+/* ---- Bottom Nav ---- */
+#bottom-nav {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    height: var(--nav-h);
+    background: rgba(5, 5, 5, 0.92);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    display: flex;
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: none; border: none;
+    color: var(--text-3); font-size: 0.6rem;
+    font-weight: 500; gap: 3px;
+    cursor: pointer; transition: color 0.2s;
+    letter-spacing: 0.01em;
+}
+.nav-item i { font-size: 1.15rem; transition: color 0.2s; }
+.nav-item.active { color: var(--text); }
+
+/* ---- Card ---- */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.35s var(--ease) both;
+}
+
+/* ---- Stat Grid ---- */
+.stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 16px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 14px;
+    text-align: center;
+    animation: fadeUp 0.35s var(--ease) both;
+}
+.stat-card:nth-child(2) { animation-delay: 0.04s; }
+.stat-card:nth-child(3) { animation-delay: 0.08s; }
+.stat-card:nth-child(4) { animation-delay: 0.12s; }
+
+.stat-number {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.7rem; font-weight: 700;
+    line-height: 1; margin-bottom: 4px;
+    color: var(--text);
+}
+.stat-card.primary .stat-number { color: var(--accent); }
+.stat-card.accent .stat-number { color: #58b4e6; }
+.stat-card.success .stat-number { color: var(--green); }
+.stat-card.warning .stat-number { color: var(--amber); }
+
+.stat-label {
+    font-size: 0.7rem; color: var(--text-3);
+    font-weight: 500; letter-spacing: 0.02em;
+}
+
+/* ---- Progress ---- */
+.progress-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 14px;
+}
+.progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.progress-title { font-size: 0.8rem; font-weight: 600; color: var(--text-2); }
+.progress-value { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+
+.progress-bar {
+    height: 5px; background: var(--bg-hover);
+    border-radius: 3px; overflow: hidden;
+}
+.progress-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.8s var(--ease);
+}
+
+/* ---- Forms ---- */
+.input-group { margin-bottom: 14px; }
+.input-group label {
+    display: block; font-size: 0.7rem; font-weight: 600;
+    margin-bottom: 5px; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+input[type="text"], textarea, select {
+    width: 100%; padding: 11px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem; font-family: inherit;
+    color: var(--text); outline: none;
+    transition: border-color 0.2s;
+}
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+input:focus, textarea:focus, select:focus { border-color: var(--border-focus); }
+
+select {
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23555' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 30px;
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+    background: var(--accent); color: #fff;
+    border: none; padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem; font-weight: 600; font-family: inherit;
+    width: 100%; cursor: pointer;
+    transition: opacity 0.15s;
+}
+.btn-primary:active { opacity: 0.8; }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2); padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600; font-family: inherit;
+    font-size: 0.9rem; cursor: pointer;
+    transition: border-color 0.15s;
+}
+.btn-outline:active { border-color: var(--border-focus); }
+
+.btn-success {
+    background: var(--green); color: #fff;
+    border: none; padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600; font-family: inherit;
+    font-size: 0.9rem; cursor: pointer;
+    transition: opacity 0.15s;
+}
+.btn-success:active { opacity: 0.8; }
+
+.btn-danger {
+    background: var(--red); color: #fff;
+    border: none; padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600; font-family: inherit;
+    font-size: 0.9rem; cursor: pointer;
+    transition: opacity 0.15s;
+}
+.btn-danger:active { opacity: 0.8; }
+
+.btn-ghost {
+    background: none; border: none;
+    color: var(--text-3); padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 500; font-family: inherit;
+    font-size: 0.85rem; cursor: pointer;
+}
+.btn-ghost:active { color: var(--text-2); }
+
+/* ---- Tab Selector ---- */
+.tab-selector {
+    display: flex;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    padding: 3px; margin-bottom: 16px;
+    border: 1px solid var(--border);
+}
+.tab-btn {
+    flex: 1; padding: 9px 14px;
+    background: transparent; border: none;
+    border-radius: 6px;
+    color: var(--text-3); font-weight: 600;
+    font-size: 0.8rem; font-family: inherit;
+    cursor: pointer; transition: all 0.2s;
+}
+.tab-btn.active {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+
+/* ---- Flashcard ---- */
+.flashcard {
+    height: 300px; perspective: 1000px;
+    margin-bottom: 20px;
+}
+.flashcard-inner {
+    position: relative; width: 100%; height: 100%;
+    text-align: center;
+    transition: transform 0.5s var(--ease);
+    transform-style: preserve-3d;
+    cursor: pointer;
+}
+.flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+
+.flashcard-front, .flashcard-back {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    padding: 24px;
+    overflow-y: auto;
+}
+.flashcard-front {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+}
+.flashcard-back {
+    transform: rotateY(180deg);
+    background: var(--bg-card);
+    border: 1px solid rgba(124, 106, 239, 0.15);
+}
+
+.word-main {
+    font-size: 2rem; font-family: 'Outfit', sans-serif;
+    font-weight: 700; color: var(--text);
+    letter-spacing: -0.02em;
+}
+.word-meaning {
+    font-size: 1.25rem; font-weight: 700;
+    color: var(--accent); margin-bottom: 6px;
+}
+.word-detail {
+    font-size: 0.82rem; color: var(--text-2);
+    line-height: 1.4; margin-bottom: 4px;
+}
+.word-example {
+    font-size: 0.85rem; font-style: italic;
+    color: var(--text-2); margin-top: 6px; line-height: 1.4;
+}
+.detail-label {
+    font-size: 0.6rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-3); margin-top: 8px; margin-bottom: 2px;
+}
+
+/* ---- Audio Button ---- */
+.audio-btn {
+    width: 34px; height: 34px; min-width: 34px;
+    border-radius: 50%;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.85rem;
+    transition: color 0.15s;
+}
+.audio-btn:active { color: var(--accent); }
+
+/* ---- Test Card ---- */
+.test-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    min-height: 260px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+.test-buttons { display: flex; gap: 10px; width: 100%; margin-top: 20px; }
+.test-buttons button { flex: 1; }
+
+/* ---- Result Card ---- */
+.result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px; text-align: center;
+}
+.result-score {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3.5rem; font-weight: 700;
+    color: var(--accent); line-height: 1; margin-bottom: 4px;
+}
+.result-label { font-size: 0.9rem; color: var(--text-3); margin-bottom: 20px; }
+
+/* ---- Part Card ---- */
+.part-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    animation: fadeUp 0.3s var(--ease) both;
+}
+.part-card:active { background: var(--bg-hover); }
+.part-card:nth-child(n) { animation-delay: calc(var(--i, 0) * 0.04s); }
+
+.part-info { display: flex; flex-direction: column; gap: 1px; }
+.part-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+.part-range { font-size: 0.7rem; color: var(--text-3); }
+.part-arrow { font-size: 0.85rem; color: var(--text-3); }
+
+/* ---- Section Title ---- */
+.section-title {
+    font-size: 0.65rem; font-weight: 700;
+    color: var(--text-3); text-transform: uppercase;
+    letter-spacing: 0.12em; margin-bottom: 10px;
+}
+
+/* ---- Review Item ---- */
+.review-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 6px;
+    display: flex; align-items: center; justify-content: space-between;
+    animation: fadeUp 0.3s var(--ease) both;
+}
+.review-item-word { font-weight: 700; font-size: 0.98rem; color: var(--text); }
+.review-item-meaning { font-size: 0.75rem; color: var(--text-3); margin-top: 1px; }
+
+/* ---- Empty State ---- */
+.empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-3);
+}
+.empty-state i { font-size: 2rem; margin-bottom: 14px; opacity: 0.3; }
+.empty-state p { font-size: 0.88rem; line-height: 1.6; }
+
+/* ---- Loading ---- */
+.hidden { display: none !important; }
+
+#loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(6px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 1000; gap: 12px;
+}
+#loading-overlay p { color: var(--text-3); font-size: 0.85rem; }
+
+.loader {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Toast ---- */
+#toast {
+    position: fixed;
+    bottom: calc(var(--nav-h) + 12px);
+    left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--bg-card);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-size: 0.8rem; font-weight: 500;
+    border: 1px solid var(--border);
+    z-index: 200; opacity: 0;
+    transition: all 0.25s var(--ease);
+    pointer-events: none; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- Animation ---- */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-success { animation: pulseGreen 0.4s ease; }
+.animate-danger { animation: pulseRed 0.4s ease; }
+
+@keyframes pulseGreen {
+    0% { box-shadow: 0 0 0 0 var(--green-soft); }
+    70% { box-shadow: 0 0 0 8px transparent; }
+}
+@keyframes pulseRed {
+    0% { box-shadow: 0 0 0 0 var(--red-soft); }
+    70% { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* ---- Settings ---- */
+.settings-section { margin-bottom: 20px; }
+.settings-section h3 {
+    font-size: 0.95rem; font-weight: 700;
+    color: var(--text); margin-bottom: 12px;
+}
+
+/* ---- Utility ---- */
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-20 { margin-top: 20px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-3); }
+.text-sm { font-size: 0.82rem; }
+.text-xs { font-size: 0.7rem; }
+.flex-row { display: flex; gap: 8px; }
+.flex-1 { flex: 1; }
+
+.card-counter {
+    text-align: center; font-size: 0.8rem;
+    color: var(--text-3); margin-top: 12px;
+    font-weight: 500;
+}
+
+@media (max-width: 360px) {
+    .word-main { font-size: 1.6rem; }
+    .stat-number { font-size: 1.4rem; }
+}
+</style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1 id="screen-title">VocabMaster</h1>
+            <button id="settings-btn" class="icon-btn" aria-label="設定"><i class="fas fa-cog"></i></button>
+        </header>
+        <main id="main-content"><div id="screen-container"></div></main>
+        <nav id="bottom-nav">
+            <button class="nav-item active" data-screen="home"><i class="fas fa-house"></i><span>ホーム</span></button>
+            <button class="nav-item" data-screen="input"><i class="fas fa-plus-circle"></i><span>入力</span></button>
+            <button class="nav-item" data-screen="confirm"><i class="fas fa-book-open"></i><span>確認</span></button>
+            <button class="nav-item" data-screen="test"><i class="fas fa-vial"></i><span>テスト</span></button>
+            <button class="nav-item" data-screen="review"><i class="fas fa-rotate"></i><span>復習</span></button>
+        </nav>
+        <div id="loading-overlay" class="hidden"><div class="loader"></div><p>AI取得中...</p></div>
+        <div id="toast" class="hidden"></div>
+    </div>
+    <script>/**
+ * storage.js - LocalStorageを使ったデータ永続化管理
+ * 学習履歴・忘却曲線アルゴリズム・統計機能を含む
+ */
+
+const StorageManager = (() => {
+    const KEYS = {
+        ITEMS: 'vocabMaster_items',
+        SETTINGS: 'vocabMaster_settings'
+    };
+
+    // 忘却曲線ベースの復習間隔（日数）
+    const REVIEW_INTERVALS = [1, 7, 30, 90];
+
+    // --- アイテム CRUD ---
+    function getAllItems() {
+        try {
+            const data = localStorage.getItem(KEYS.ITEMS);
+            const items = data ? JSON.parse(data) : [];
+            return items.map(migrateItem);
+        } catch (e) {
+            console.error('データの読み取り失敗:', e);
+            return [];
+        }
+    }
+
+    // 旧データ形式からのマイグレーション
+    function migrateItem(item) {
+        // synonyms が文字列の場合は配列に変換
+        if (typeof item.synonyms === 'string') {
+            const parts = item.synonyms.split('/').map(s => s.trim());
+            item.synonyms = parts[0] ? parts[0].split(',').map(s => s.trim()).filter(Boolean) : [];
+            item.antonyms = parts[1] ? parts[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+        }
+        // 新フィールドのデフォルト値を保証
+        if (!Array.isArray(item.synonyms)) item.synonyms = [];
+        if (!Array.isArray(item.antonyms)) item.antonyms = [];
+        if (item.lastStudiedAt === undefined) item.lastStudiedAt = null;
+        if (item.nextReviewAt === undefined) item.nextReviewAt = null;
+        if (item.correctCount === undefined) item.correctCount = 0;
+        if (item.reviewStage === undefined) item.reviewStage = 0;
+        if (item.isWeak === undefined) item.isWeak = false;
+        return item;
+    }
+
+    function saveItem(item) {
+        const items = getAllItems();
+        item.id = item.id || generateId();
+        item.createdAt = item.createdAt || new Date().toISOString();
+        item.isWeak = item.isWeak || false;
+        item.lastStudiedAt = item.lastStudiedAt || null;
+        item.nextReviewAt = item.nextReviewAt || null;
+        item.correctCount = item.correctCount || 0;
+        item.reviewStage = item.reviewStage || 0;
+
+        if (!Array.isArray(item.synonyms)) item.synonyms = [];
+        if (!Array.isArray(item.antonyms)) item.antonyms = [];
+
+        const existingIdx = items.findIndex(i => i.id === item.id);
+        if (existingIdx >= 0) {
+            items[existingIdx] = { ...items[existingIdx], ...item };
+        } else {
+            items.push(item);
+        }
+
+        _persist(items);
+        return item;
+    }
+
+    function deleteItem(id) {
+        let items = getAllItems();
+        items = items.filter(i => i.id !== id);
+        _persist(items);
+    }
+
+    function getItem(id) {
+        return getAllItems().find(i => i.id === id) || null;
+    }
+
+    // --- 苦手管理 ---
+    function toggleWeak(id, isWeak) {
+        const items = getAllItems();
+        const item = items.find(i => i.id === id);
+        if (item) {
+            item.isWeak = isWeak;
+            _persist(items);
+        }
+    }
+
+    function getWeakItems() {
+        return getAllItems().filter(i => i.isWeak);
+    }
+
+    // --- パート管理 (20個ずつ) ---
+    function getItemsByType(type) {
+        return getAllItems().filter(i => i.type === type);
+    }
+
+    function getItemsByPart(type, partIndex) {
+        const allItems = getItemsByType(type);
+        const start = partIndex * 20;
+        return allItems.slice(start, start + 20);
+    }
+
+    function getPartCount(type) {
+        const count = getItemsByType(type).length;
+        return Math.ceil(count / 20);
+    }
+
+    // --- 強制復習アルゴリズム ---
+    /**
+     * 正解時: 復習ステージを進め、次回復習日を設定
+     */
+    function recordCorrect(id) {
+        const items = getAllItems();
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+
+        item.lastStudiedAt = new Date().toISOString();
+        item.correctCount = (item.correctCount || 0) + 1;
+
+        const stage = item.reviewStage || 0;
+        if (stage < REVIEW_INTERVALS.length) {
+            const days = REVIEW_INTERVALS[stage];
+            const next = new Date();
+            next.setDate(next.getDate() + days);
+            item.nextReviewAt = next.toISOString();
+            item.reviewStage = stage + 1;
+        } else {
+            // マスター済み（ステージ4超）
+            item.nextReviewAt = null;
+        }
+
+        _persist(items);
+        return item;
+    }
+
+    /**
+     * 不正解時: 苦手リストに追加し、ステージをリセット
+     */
+    function recordIncorrect(id) {
+        const items = getAllItems();
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+
+        item.isWeak = true;
+        item.reviewStage = 0;
+        item.correctCount = 0;
+        item.lastStudiedAt = new Date().toISOString();
+        item.nextReviewAt = null;
+
+        _persist(items);
+        return item;
+    }
+
+    /**
+     * 今日復習が必要なアイテムを取得
+     * - nextReviewAt が現在以前
+     * - まだ一度も学習していない（nextReviewAt === null かつ reviewStage === 0）
+     */
+    function getDueItems() {
+        const now = new Date();
+        return getAllItems().filter(item => {
+            if (item.reviewStage >= REVIEW_INTERVALS.length && !item.isWeak && item.nextReviewAt === null) {
+                return false; // マスター済み
+            }
+            if (item.nextReviewAt === null && item.reviewStage === 0) {
+                return true; // 未学習
+            }
+            if (item.nextReviewAt && new Date(item.nextReviewAt) <= now) {
+                return true; // 復習期限到来
+            }
+            return false;
+        });
+    }
+
+    // --- 統計情報 ---
+    function getStats() {
+        const items = getAllItems();
+        const total = items.length;
+        const words = items.filter(i => i.type === 'word').length;
+        const phrases = items.filter(i => i.type === 'phrase').length;
+        const weakCount = items.filter(i => i.isWeak).length;
+        const mastered = items.filter(i => i.reviewStage >= REVIEW_INTERVALS.length).length;
+        const dueToday = getDueItems().length;
+        const studied = items.filter(i => i.lastStudiedAt !== null).length;
+
+        return {
+            total,
+            words,
+            phrases,
+            weakCount,
+            mastered,
+            dueToday,
+            studied,
+            masteryRate: total > 0 ? Math.round((mastered / total) * 100) : 0
+        };
+    }
+
+    // --- 設定 ---
+    function getSettings() {
+        try {
+            const data = localStorage.getItem(KEYS.SETTINGS);
+            return data ? JSON.parse(data) : { geminiApiKey: '' };
+        } catch (e) {
+            return { geminiApiKey: '' };
+        }
+    }
+
+    function saveSettings(settings) {
+        localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+    }
+
+    // --- エクスポート / インポート ---
+    function exportData() {
+        const data = {
+            version: 2,
+            exportedAt: new Date().toISOString(),
+            items: getAllItems(),
+            settings: getSettings()
+        };
+        return JSON.stringify(data, null, 2);
+    }
+
+    function importData(jsonString) {
+        try {
+            const data = JSON.parse(jsonString);
+            if (data.items && Array.isArray(data.items)) {
+                localStorage.setItem(KEYS.ITEMS, JSON.stringify(data.items));
+            }
+            if (data.settings) {
+                saveSettings(data.settings);
+            }
+            return true;
+        } catch (e) {
+            console.error('インポート失敗:', e);
+            return false;
+        }
+    }
+
+    function clearAllData() {
+        localStorage.removeItem(KEYS.ITEMS);
+    }
+
+    // --- ユーティリティ ---
+    function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    }
+
+    function _persist(items) {
+        localStorage.setItem(KEYS.ITEMS, JSON.stringify(items));
+    }
+
+    return {
+        getAllItems, saveItem, deleteItem, getItem,
+        toggleWeak, getWeakItems,
+        getItemsByType, getItemsByPart, getPartCount,
+        recordCorrect, recordIncorrect, getDueItems,
+        getStats,
+        getSettings, saveSettings,
+        exportData, importData, clearAllData
+    };
+})();
+</script>
+    <script>/**
+ * ai.js - Gemini API を使った単語情報の自動取得
+ * synonyms と antonyms を配列として分離して返す
+ */
+
+const AIManager = (() => {
+    const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+    async function fetchWordDetails(term) {
+        const settings = StorageManager.getSettings();
+        const apiKey = settings.geminiApiKey;
+
+        if (!apiKey) {
+            throw new Error('APIキーが設定されていません。\n設定画面（⚙️）から登録してください。');
+        }
+
+        const prompt = `
+            以下の英単語または英熟語について、学習に必要な情報を日本語で取得してください。
+            返答は必ず以下のJSON形式のみで行ってください。余計な解説文やバックティックは含めないでください。
+
+            語句: "${term}"
+
+            JSON形式:
+            {
+                "meaning": "日本語での主な意味（簡潔に）",
+                "synonyms": ["同義語1", "同義語2", "同義語3"],
+                "antonyms": ["対義語1", "対義語2"],
+                "derivatives": "派生語や品詞変化（例: 名詞形:xxx, 形容詞形:yyy, 副詞形:zzz）",
+                "example": "その語句を使った、学習に適した自然な英語の例文"
+            }
+
+            注意:
+            - synonyms と antonyms は必ず配列にしてください
+            - 同義語・対義語がない場合は空の配列 [] にしてください
+            - 例文は英語で、実用的で自然な文にしてください
+        `;
+
+        try {
+            const response = await fetch(`${API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }],
+                    generationConfig: {
+                        responseMimeType: 'application/json'
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = errData.error?.message || `APIエラー (${response.status})`;
+                throw new Error(errMsg);
+            }
+
+            const data = await response.json();
+            const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!textResponse) {
+                throw new Error('AIからの応答が空でした');
+            }
+
+            // JSON部分を抽出（バックティック等を除去）
+            const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('AIからのレスポンスが解析できませんでした');
+
+            const parsed = JSON.parse(jsonMatch[0]);
+
+            // 型を保証
+            return {
+                meaning: parsed.meaning || '',
+                synonyms: Array.isArray(parsed.synonyms) ? parsed.synonyms : [],
+                antonyms: Array.isArray(parsed.antonyms) ? parsed.antonyms : [],
+                derivatives: parsed.derivatives || '',
+                example: parsed.example || ''
+            };
+        } catch (e) {
+            console.error('AI取得失敗:', e);
+            throw e;
+        }
+    }
+
+    return {
+        fetchWordDetails
+    };
+})();
+</script>
+    <script>/**
+ * audio.js - Web Speech API を使った音声再生機能
+ */
+
+const AudioManager = (() => {
+    const synth = window.speechSynthesis;
+
+    function play(text, lang = 'en-US') {
+        if (!text) return;
+        
+        // 再生中の音声を停止
+        if (synth.speaking) {
+            synth.cancel();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = 0.9; // 少しゆっくりめに再生
+        
+        // 利用可能な音声から最適なものを選択（オプション）
+        const voices = synth.getVoices();
+        const enVoice = voices.find(v => v.lang === lang && v.name.includes('Google')) || 
+                        voices.find(v => v.lang === lang);
+        if (enVoice) {
+            utterance.voice = enVoice;
+        }
+
+        synth.speak(utterance);
+    }
+
+    return {
+        play
+    };
+})();
+</script>
+    <script>/**
+ * gdrive.js - Google Apps Script 経由の Google Drive データ同期
+ *
+ * ユーザーは Google Apps Script にバックエンドコードを配置し、
+ * そのURLをこのアプリの設定画面に登録するだけ。
+ * OAuth不要・API設定不要のシンプルな構成。
+ */
+
+const DriveSync = (() => {
+    const SETTINGS_KEY = 'vocabMaster_syncSettings';
+
+    function getConfig() {
+        try {
+            const data = localStorage.getItem(SETTINGS_KEY);
+            return data ? JSON.parse(data) : { scriptUrl: '', lastSync: null };
+        } catch {
+            return { scriptUrl: '', lastSync: null };
+        }
+    }
+
+    function saveConfig(config) {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(config));
+    }
+
+    function getScriptUrl() {
+        return getConfig().scriptUrl;
+    }
+
+    function setScriptUrl(url) {
+        const config = getConfig();
+        config.scriptUrl = url;
+        saveConfig(config);
+    }
+
+    function getLastSync() {
+        return getConfig().lastSync;
+    }
+
+    /**
+     * データをGoogle Driveにバックアップ（Apps Script経由）
+     */
+    async function backup() {
+        const url = getScriptUrl();
+        if (!url) throw new Error('同期URLが未設定です');
+
+        const data = StorageManager.exportData();
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: data,
+            mode: 'no-cors'
+        });
+
+        // no-corsモードではレスポンスが読めないのでGET確認
+        // 保存成功を前提として記録
+        const config = getConfig();
+        config.lastSync = new Date().toISOString();
+        saveConfig(config);
+
+        return true;
+    }
+
+    /**
+     * Google Driveからデータを復元（Apps Script経由）
+     */
+    async function restore() {
+        const url = getScriptUrl();
+        if (!url) throw new Error('同期URLが未設定です');
+
+        const response = await fetch(url + '?action=load', {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            throw new Error(`復元に失敗しました (${response.status})`);
+        }
+
+        const jsonStr = await response.text();
+        if (!jsonStr || jsonStr === 'null' || jsonStr === '{}') {
+            throw new Error('バックアップデータがありません');
+        }
+
+        const success = StorageManager.importData(jsonStr);
+        if (!success) throw new Error('データの読み込みに失敗しました');
+
+        const config = getConfig();
+        config.lastSync = new Date().toISOString();
+        saveConfig(config);
+
+        return true;
+    }
+
+    /**
+     * 最終同期日時のフォーマット
+     */
+    function formatLastSync() {
+        const last = getLastSync();
+        if (!last) return '未同期';
+        const d = new Date(last);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    return {
+        getConfig, saveConfig, getScriptUrl, setScriptUrl,
+        getLastSync, formatLastSync,
+        backup, restore
+    };
+})();
+</script>
+    <script>/**
+ * app.js - VocabMaster アプリ全体の UI 制御と各モードのロジック
+ * ダッシュボード、入力、確認、テスト、復習の5画面
+ */
+
+const App = (() => {
+    const screens = {
+        home: renderHomeScreen,
+        input: renderInputScreen,
+        confirm: renderConfirmScreen,
+        test: renderTestScreen,
+        review: renderReviewScreen
+    };
+
+    let currentScreen = 'home';
+    let currentData = [];
+    let currentIndex = 0;
+    let testResults = { correct: 0, incorrect: 0 };
+
+    // --- 初期化 ---
+    function init() {
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.addEventListener('click', () => switchScreen(btn.dataset.screen));
+        });
+
+        document.getElementById('settings-btn').addEventListener('click', showSettings);
+
+        switchScreen('home');
+    }
+
+    // --- 画面切り替え ---
+    function switchScreen(screenId) {
+        currentScreen = screenId;
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.screen === screenId);
+        });
+
+        const titles = {
+            home: 'VocabMaster',
+            input: '単語登録',
+            confirm: '確認学習',
+            test: 'テスト',
+            review: '苦手復習'
+        };
+        document.getElementById('screen-title').textContent = titles[screenId] || 'VocabMaster';
+
+        const container = document.getElementById('screen-container');
+        container.innerHTML = '';
+        if (screens[screenId]) {
+            screens[screenId](container);
+        }
+    }
+
+    // =============================================
+    // 🏠 ダッシュボード
+    // =============================================
+    function renderHomeScreen(container) {
+        const stats = StorageManager.getStats();
+
+        container.innerHTML = `
+            <div class="section-title">学習状況</div>
+            <div class="stat-grid">
+                <div class="stat-card primary">
+                    <div class="stat-number">${stats.total}</div>
+                    <div class="stat-label">登録語数</div>
+                </div>
+                <div class="stat-card accent">
+                    <div class="stat-number">${stats.dueToday}</div>
+                    <div class="stat-label">今日の復習</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-number">${stats.mastered}</div>
+                    <div class="stat-label">マスター済み</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-number">${stats.weakCount}</div>
+                    <div class="stat-label">苦手語</div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span class="progress-title">習得率</span>
+                    <span class="progress-value">${stats.masteryRate}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%;" id="mastery-bar"></div>
+                </div>
+            </div>
+
+            <div class="section-title">内訳</div>
+            <div class="stat-grid">
+                <div class="stat-card primary" style="cursor:pointer;" id="home-words-btn">
+                    <div class="stat-number">${stats.words}</div>
+                    <div class="stat-label">単語</div>
+                </div>
+                <div class="stat-card accent" style="cursor:pointer;" id="home-phrases-btn">
+                    <div class="stat-number">${stats.phrases}</div>
+                    <div class="stat-label">熟語</div>
+                </div>
+            </div>
+
+            ${stats.dueToday > 0 ? `
+                <button class="btn-primary mt-16" id="start-review-btn">
+                    <i class="fas fa-play"></i> 今日の復習を開始（${stats.dueToday}語）
+                </button>
+            ` : ''}
+
+            ${stats.total === 0 ? `
+                <div class="card mt-16 text-center" style="animation-delay: 0.3s;">
+                    <p style="color: var(--text-secondary); line-height: 1.6;">
+                        <i class="fas fa-lightbulb" style="color: var(--warning); font-size: 1.5rem; display: block; margin-bottom: 12px;"></i>
+                        まだ単語が登録されていません。<br>
+                        「入力」タブから単語を登録しましょう！
+                    </p>
+                </div>
+            ` : ''}
+        `;
+
+        // プログレスバーアニメーション
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                const bar = document.getElementById('mastery-bar');
+                if (bar) bar.style.width = stats.masteryRate + '%';
+            }, 100);
+        });
+
+        // ボタンイベント
+        const startBtn = document.getElementById('start-review-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                currentData = StorageManager.getDueItems().sort(() => Math.random() - 0.5);
+                currentIndex = 0;
+                testResults = { correct: 0, incorrect: 0 };
+                switchScreen('test');
+                showTestCard();
+            });
+        }
+
+        const wordsBtn = document.getElementById('home-words-btn');
+        if (wordsBtn) wordsBtn.addEventListener('click', () => switchScreen('confirm'));
+
+        const phrasesBtn = document.getElementById('home-phrases-btn');
+        if (phrasesBtn) phrasesBtn.addEventListener('click', () => switchScreen('confirm'));
+    }
+
+    // =============================================
+    // ① 入力モード
+    // =============================================
+    function renderInputScreen(container) {
+        container.innerHTML = `
+            <div class="card">
+                <div class="input-group">
+                    <label>英単語・英熟語</label>
+                    <input type="text" id="input-term" placeholder="例: consistency" autocomplete="off">
+                </div>
+                <button id="auto-fetch-btn" class="btn-primary">
+                    <i class="fas fa-wand-magic-sparkles"></i> AIで自動取得
+                </button>
+            </div>
+            <div id="edit-area" class="hidden">
+                <div class="card" style="animation-delay: 0.1s;">
+                    <div class="input-group">
+                        <label>意味</label>
+                        <input type="text" id="edit-meaning">
+                    </div>
+                    <div class="input-group">
+                        <label>同義語（カンマ区切り）</label>
+                        <input type="text" id="edit-synonyms" placeholder="例: coherence, uniformity">
+                    </div>
+                    <div class="input-group">
+                        <label>対義語（カンマ区切り）</label>
+                        <input type="text" id="edit-antonyms" placeholder="例: inconsistency">
+                    </div>
+                    <div class="input-group">
+                        <label>派生語・品詞変化</label>
+                        <textarea id="edit-derivatives" rows="2" placeholder="例: consistent (形容詞), consistently (副詞)"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>例文</label>
+                        <textarea id="edit-example" rows="2" placeholder="例: Consistency is the key to success."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>分類</label>
+                        <select id="edit-type">
+                            <option value="word">単語編</option>
+                            <option value="phrase">熟語編</option>
+                        </select>
+                    </div>
+                    <button id="save-btn" class="btn-primary">
+                        <i class="fas fa-check"></i> この内容で登録
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const inputTerm = document.getElementById('input-term');
+        const autoFetchBtn = document.getElementById('auto-fetch-btn');
+        const editArea = document.getElementById('edit-area');
+
+        // Enterキーで自動取得
+        inputTerm.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') autoFetchBtn.click();
+        });
+
+        autoFetchBtn.addEventListener('click', async () => {
+            const term = inputTerm.value.trim();
+            if (!term) return showToast('単語を入力してください');
+
+            showLoading(true);
+            try {
+                const details = await AIManager.fetchWordDetails(term);
+                document.getElementById('edit-meaning').value = details.meaning;
+                document.getElementById('edit-synonyms').value = details.synonyms.join(', ');
+                document.getElementById('edit-antonyms').value = details.antonyms.join(', ');
+                document.getElementById('edit-derivatives').value = details.derivatives;
+                document.getElementById('edit-example').value = details.example;
+
+                // 熟語かどうかを自動判定
+                if (term.includes(' ')) {
+                    document.getElementById('edit-type').value = 'phrase';
+                }
+
+                editArea.classList.remove('hidden');
+                autoFetchBtn.innerHTML = '<i class="fas fa-rotate"></i> 再取得';
+            } catch (e) {
+                showToast(e.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        document.getElementById('save-btn').addEventListener('click', () => {
+            const term = inputTerm.value.trim();
+            if (!term) return showToast('単語を入力してください');
+
+            const synonymsStr = document.getElementById('edit-synonyms').value;
+            const antonymsStr = document.getElementById('edit-antonyms').value;
+
+            const item = {
+                type: document.getElementById('edit-type').value,
+                term: term,
+                meaning: document.getElementById('edit-meaning').value,
+                synonyms: synonymsStr ? synonymsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
+                antonyms: antonymsStr ? antonymsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
+                derivatives: document.getElementById('edit-derivatives').value,
+                example: document.getElementById('edit-example').value
+            };
+
+            StorageManager.saveItem(item);
+            showToast('✅ 登録しました！');
+
+            // フォームリセット
+            inputTerm.value = '';
+            editArea.classList.add('hidden');
+            autoFetchBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AIで自動取得';
+
+            // フォーカスを入力欄に戻す
+            inputTerm.focus();
+        });
+    }
+
+    // =============================================
+    // ② 確認モード
+    // =============================================
+    function renderConfirmScreen(container) {
+        const wordParts = StorageManager.getPartCount('word');
+        const phraseParts = StorageManager.getPartCount('phrase');
+
+        if (wordParts === 0 && phraseParts === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-book-open"></i>
+                    <p>まだ単語が登録されていません。<br>「入力」タブから登録しましょう。</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="tab-selector">
+                <button class="tab-btn active" data-type="word" id="tab-word">単語編 (${StorageManager.getItemsByType('word').length})</button>
+                <button class="tab-btn" data-type="phrase" id="tab-phrase">熟語編 (${StorageManager.getItemsByType('phrase').length})</button>
+            </div>
+            <div id="part-list-container"></div>
+        `;
+
+        const tabWord = document.getElementById('tab-word');
+        const tabPhrase = document.getElementById('tab-phrase');
+
+        function showParts(type) {
+            tabWord.classList.toggle('active', type === 'word');
+            tabPhrase.classList.toggle('active', type === 'phrase');
+
+            const parts = StorageManager.getPartCount(type);
+            const listContainer = document.getElementById('part-list-container');
+
+            if (parts === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <p>${type === 'word' ? '単語' : '熟語'}はまだ登録されていません。</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < parts; i++) {
+                const items = StorageManager.getItemsByPart(type, i);
+                const start = i * 20 + 1;
+                const end = start + items.length - 1;
+                html += `
+                    <div class="part-card" data-type="${type}" data-part="${i}" style="animation-delay: ${i * 0.06}s;">
+                        <div class="part-info">
+                            <div class="part-name">Part ${i + 1}</div>
+                            <div class="part-range">${start} 〜 ${end}（${items.length}語）</div>
+                        </div>
+                        <span class="part-arrow"><i class="fas fa-chevron-right"></i></span>
+                    </div>
+                `;
+            }
+            listContainer.innerHTML = html;
+
+            // パートクリックイベント
+            listContainer.querySelectorAll('.part-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const t = card.dataset.type;
+                    const p = parseInt(card.dataset.part, 10);
+                    startStudy(t, p);
+                });
+            });
+        }
+
+        tabWord.addEventListener('click', () => showParts('word'));
+        tabPhrase.addEventListener('click', () => showParts('phrase'));
+
+        showParts('word');
+    }
+
+    function startStudy(type, partIndex) {
+        currentData = StorageManager.getItemsByPart(type, partIndex);
+        currentIndex = 0;
+        showFlashcard();
+    }
+
+    function showFlashcard() {
+        const container = document.getElementById('screen-container');
+        const item = currentData[currentIndex];
+
+        if (!item) {
+            container.innerHTML = `
+                <div class="result-card">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">🎉</div>
+                    <h2 style="color: var(--text-primary); margin-bottom: 8px;">学習完了！</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 24px;">このパートの確認が終わりました。</p>
+                    <button class="btn-primary" id="back-to-parts-btn">パート一覧に戻る</button>
+                </div>
+            `;
+            document.getElementById('back-to-parts-btn').addEventListener('click', () => switchScreen('confirm'));
+            return;
+        }
+
+        const synText = item.synonyms.length > 0 ? item.synonyms.join(', ') : '—';
+        const antText = item.antonyms.length > 0 ? item.antonyms.join(', ') : '—';
+        const safeExample = escapeQuotes(item.example || '');
+
+        container.innerHTML = `
+            <div class="flashcard" id="card">
+                <div class="flashcard-inner">
+                    <div class="flashcard-front">
+                        <div class="word-main">${escapeHtml(item.term)}</div>
+                        <button class="audio-btn mt-12" id="play-term-btn">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        <p style="margin-top: 16px; font-size: 0.85rem; color: var(--text-muted);">タップで裏返す</p>
+                    </div>
+                    <div class="flashcard-back">
+                        <div class="word-meaning">${escapeHtml(item.meaning)}</div>
+                        <div class="detail-label">同義語</div>
+                        <div class="word-detail">${escapeHtml(synText)}</div>
+                        <div class="detail-label">対義語</div>
+                        <div class="word-detail">${escapeHtml(antText)}</div>
+                        ${item.example ? `
+                            <div class="detail-label">例文</div>
+                            <div class="word-example">${escapeHtml(item.example)}</div>
+                            <button class="audio-btn mt-8" id="play-example-btn">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="flex-row">
+                <button class="btn-outline flex-1" id="prev-btn" ${currentIndex === 0 ? 'disabled style="opacity:0.4"' : ''}>
+                    <i class="fas fa-arrow-left"></i> 前へ
+                </button>
+                <button class="btn-primary flex-1" id="next-btn" style="width:auto;">
+                    次へ <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+            <div class="card-counter">${currentIndex + 1} / ${currentData.length}</div>
+        `;
+
+        // フラッシュカードのタップ反転
+        const cardEl = document.getElementById('card');
+        cardEl.addEventListener('click', (e) => {
+            if (e.target.closest('.audio-btn')) return;
+            cardEl.classList.toggle('flipped');
+        });
+
+        // 音声再生
+        const playTermBtn = document.getElementById('play-term-btn');
+        playTermBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            AudioManager.play(item.term);
+        });
+
+        const playExampleBtn = document.getElementById('play-example-btn');
+        if (playExampleBtn) {
+            playExampleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                AudioManager.play(item.example);
+            });
+        }
+
+        // ナビゲーション
+        document.getElementById('next-btn').addEventListener('click', () => {
+            currentIndex++;
+            showFlashcard();
+        });
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                showFlashcard();
+            }
+        });
+    }
+
+    // =============================================
+    // ③ テストモード
+    // =============================================
+    function renderTestScreen(container) {
+        const allItems = StorageManager.getAllItems();
+        if (allItems.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-vial"></i>
+                    <p>まだ単語が登録されていません。<br>「入力」タブから登録しましょう。</p>
+                </div>
+            `;
+            return;
+        }
+
+        const dueItems = StorageManager.getDueItems();
+
+        container.innerHTML = `
+            <div class="section-title">テスト範囲</div>
+            <div class="card" style="cursor:pointer;" id="test-due-btn">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                        <div style="font-weight:700; color: var(--text-primary);">要復習のみ</div>
+                        <div class="text-xs text-muted mt-4">${dueItems.length}語が復習対象</div>
+                    </div>
+                    <span style="color: var(--accent); font-size: 1.5rem;"><i class="fas fa-bullseye"></i></span>
+                </div>
+            </div>
+            <div class="card" style="cursor:pointer; animation-delay: 0.08s;" id="test-all-btn">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                        <div style="font-weight:700; color: var(--text-primary);">全単語テスト</div>
+                        <div class="text-xs text-muted mt-4">${allItems.length}語からランダム出題</div>
+                    </div>
+                    <span style="color: var(--secondary); font-size: 1.5rem;"><i class="fas fa-shuffle"></i></span>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('test-due-btn').addEventListener('click', () => {
+            if (dueItems.length === 0) {
+                showToast('復習対象の単語がありません');
+                return;
+            }
+            currentData = [...dueItems].sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            testResults = { correct: 0, incorrect: 0 };
+            showTestCard();
+        });
+
+        document.getElementById('test-all-btn').addEventListener('click', () => {
+            currentData = [...allItems].sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            testResults = { correct: 0, incorrect: 0 };
+            showTestCard();
+        });
+    }
+
+    function showTestCard() {
+        const container = document.getElementById('screen-container');
+        const item = currentData[currentIndex];
+
+        if (!item) {
+            // テスト完了 - 結果サマリー
+            const total = testResults.correct + testResults.incorrect;
+            const rate = total > 0 ? Math.round((testResults.correct / total) * 100) : 0;
+
+            container.innerHTML = `
+                <div class="result-card">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">
+                        ${rate >= 80 ? '🏆' : rate >= 50 ? '💪' : '📚'}
+                    </div>
+                    <div class="result-score">${rate}%</div>
+                    <div class="result-label">正答率</div>
+                    <div style="display:flex; gap: 24px; justify-content:center; margin-bottom: 24px;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight:700; color: var(--success);">${testResults.correct}</div>
+                            <div class="text-xs text-muted">正解</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight:700; color: var(--danger);">${testResults.incorrect}</div>
+                            <div class="text-xs text-muted">不正解</div>
+                        </div>
+                    </div>
+                    <button class="btn-primary mb-12" id="retry-test-btn">
+                        <i class="fas fa-rotate"></i> もう一度テスト
+                    </button>
+                    <button class="btn-outline" style="width:100%;" id="back-home-btn">
+                        ホームに戻る
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('retry-test-btn').addEventListener('click', () => switchScreen('test'));
+            document.getElementById('back-home-btn').addEventListener('click', () => switchScreen('home'));
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="card-counter" style="margin-top:0; margin-bottom:16px;">
+                ${currentIndex + 1} / ${currentData.length}
+            </div>
+            <div class="test-card" id="reveal-card">
+                <div class="word-main" style="margin-bottom: 8px;">${escapeHtml(item.term)}</div>
+                <button class="audio-btn" id="test-play-btn" style="margin-bottom: 16px;">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <p id="reveal-hint" class="text-sm text-muted">タップで正解を表示</p>
+                <div id="answer-area" class="hidden" style="width:100%;">
+                    <div class="word-meaning mt-12">${escapeHtml(item.meaning)}</div>
+                    ${item.example ? `<div class="word-example mt-8">${escapeHtml(item.example)}</div>` : ''}
+                    <div class="test-buttons mt-20">
+                        <button class="btn-success flex-1" id="btn-correct">
+                            <i class="fas fa-circle-check"></i> 正解
+                        </button>
+                        <button class="btn-danger flex-1" id="btn-incorrect">
+                            <i class="fas fa-circle-xmark"></i> 不正解
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const revealCard = document.getElementById('reveal-card');
+        const answerArea = document.getElementById('answer-area');
+        const revealHint = document.getElementById('reveal-hint');
+
+        // 音声再生
+        document.getElementById('test-play-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            AudioManager.play(item.term);
+        });
+
+        // 回答表示
+        revealCard.addEventListener('click', (e) => {
+            if (e.target.closest('.audio-btn') || e.target.closest('.btn-success') || e.target.closest('.btn-danger')) return;
+            answerArea.classList.remove('hidden');
+            revealHint.classList.add('hidden');
+        });
+
+        // 正解
+        document.getElementById('btn-correct').addEventListener('click', (e) => {
+            e.stopPropagation();
+            StorageManager.recordCorrect(item.id);
+            testResults.correct++;
+            revealCard.classList.add('animate-success');
+            setTimeout(() => {
+                currentIndex++;
+                showTestCard();
+            }, 350);
+        });
+
+        // 不正解
+        document.getElementById('btn-incorrect').addEventListener('click', (e) => {
+            e.stopPropagation();
+            StorageManager.recordIncorrect(item.id);
+            testResults.incorrect++;
+            revealCard.classList.add('animate-danger');
+            setTimeout(() => {
+                currentIndex++;
+                showTestCard();
+            }, 350);
+        });
+    }
+
+    // =============================================
+    // ④ 復習モード（苦手リスト）
+    // =============================================
+    function renderReviewScreen(container) {
+        const weakItems = StorageManager.getWeakItems();
+
+        if (weakItems.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-medal"></i>
+                    <p>苦手リストは空です！<br>テストモードで間違えた単語が<br>ここに表示されます。</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="section-title">苦手リスト（${weakItems.length}語）</div>
+            <div class="flex-row mb-16">
+                <button class="btn-primary flex-1" id="review-flashcard-btn">
+                    <i class="fas fa-layer-group"></i> フラッシュカード
+                </button>
+            </div>
+            <div id="weak-list"></div>
+        `;
+
+        const weakList = document.getElementById('weak-list');
+        weakItems.forEach((item, idx) => {
+            const el = document.createElement('div');
+            el.className = 'review-item';
+            el.style.animationDelay = `${idx * 0.04}s`;
+            el.innerHTML = `
+                <div>
+                    <div class="review-item-word">${escapeHtml(item.term)}</div>
+                    <div class="review-item-meaning">${escapeHtml(item.meaning)}</div>
+                </div>
+                <button class="btn-ghost remove-weak-btn" data-id="${item.id}" title="苦手解除">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            `;
+            weakList.appendChild(el);
+        });
+
+        // 苦手解除
+        weakList.querySelectorAll('.remove-weak-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                StorageManager.toggleWeak(id, false);
+                showToast('苦手リストから解除しました');
+                renderReviewScreen(container);
+            });
+        });
+
+        // フラッシュカードモードで確認
+        document.getElementById('review-flashcard-btn').addEventListener('click', () => {
+            currentData = weakItems;
+            currentIndex = 0;
+            showFlashcard();
+        });
+    }
+
+    // =============================================
+    // ⚙️ 設定画面
+    // =============================================
+    function showSettings() {
+        const container = document.getElementById('screen-container');
+        const settings = StorageManager.getSettings();
+        const stats = StorageManager.getStats();
+
+        // ナビアクティブ状態をリセット
+        document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('screen-title').textContent = '設定';
+
+        container.innerHTML = `
+            <div class="settings-section">
+                <h3><i class="fas fa-key"></i> API設定</h3>
+                <div class="card">
+                    <div class="input-group">
+                        <label>Gemini API キー</label>
+                        <input type="text" id="settings-api-key" value="${escapeHtml(settings.geminiApiKey)}" placeholder="AI自動取得に必要です">
+                    </div>
+                    <button id="save-settings-btn" class="btn-primary">
+                        <i class="fas fa-save"></i> 設定を保存
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fab fa-google-drive"></i> Google Drive 同期</h3>
+                <div class="card" style="animation-delay: 0.06s;">
+                    <div class="input-group">
+                        <label>Apps Script URL</label>
+                        <input type="text" id="settings-script-url" value="${escapeHtml(DriveSync.getScriptUrl())}" placeholder="Google Apps ScriptのデプロイURL">
+                    </div>
+                    <button id="save-script-url-btn" class="btn-outline mb-12" style="width:100%;">
+                        <i class="fas fa-link"></i> URLを保存
+                    </button>
+                    <p class="text-xs text-muted mb-12">最終同期: ${DriveSync.formatLastSync()}</p>
+                    <div class="flex-row mb-12">
+                        <button id="backup-btn" class="btn-primary flex-1" style="font-size:0.85rem;">
+                            <i class="fas fa-cloud-arrow-up"></i> バックアップ
+                        </button>
+                        <button id="restore-btn" class="btn-outline flex-1" style="font-size:0.85rem;">
+                            <i class="fas fa-cloud-arrow-down"></i> 復元
+                        </button>
+                    </div>
+                    <p class="text-xs text-muted">
+                        設定手順は<a href="https://script.google.com" target="_blank" rel="noopener" style="color:var(--accent);">Google Apps Script</a>でプロジェクトを作成し、コードを貼り付けてデプロイしてください。
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-database"></i> データ管理</h3>
+                <div class="card" style="animation-delay: 0.1s;">
+                    <p class="text-sm text-muted mb-12">
+                        登録語数: ${stats.total}語（単語: ${stats.words} / 熟語: ${stats.phrases}）
+                    </p>
+                    <button id="export-btn" class="btn-outline mb-12" style="width:100%;">
+                        <i class="fas fa-download"></i> データをエクスポート
+                    </button>
+                    <div class="input-group">
+                        <label>データインポート</label>
+                        <textarea id="import-data" rows="3" placeholder="エクスポートしたJSONを貼り付け"></textarea>
+                    </div>
+                    <button id="import-btn" class="btn-outline mb-12" style="width:100%;">
+                        <i class="fas fa-upload"></i> インポート実行
+                    </button>
+                    <button id="clear-btn" class="btn-danger" style="width:100%;">
+                        <i class="fas fa-trash"></i> 全データ削除
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // 設定保存
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+            StorageManager.saveSettings({
+                geminiApiKey: document.getElementById('settings-api-key').value
+            });
+            showToast('✅ 設定を保存しました');
+        });
+
+        // Drive同期URL保存
+        document.getElementById('save-script-url-btn').addEventListener('click', () => {
+            DriveSync.setScriptUrl(document.getElementById('settings-script-url').value.trim());
+            showToast('✅ 同期URLを保存しました');
+        });
+
+        // バックアップ
+        document.getElementById('backup-btn').addEventListener('click', async () => {
+            if (!DriveSync.getScriptUrl()) {
+                return showToast('同期URLを先に設定してください');
+            }
+            showLoading(true);
+            try {
+                await DriveSync.backup();
+                showToast('✅ バックアップ完了');
+                showSettings(); // 最終同期日時を更新表示
+            } catch (e) {
+                showToast('❌ ' + e.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // 復元
+        document.getElementById('restore-btn').addEventListener('click', async () => {
+            if (!DriveSync.getScriptUrl()) {
+                return showToast('同期URLを先に設定してください');
+            }
+            if (!confirm('クラウドのデータで上書きしますか？')) return;
+            showLoading(true);
+            try {
+                await DriveSync.restore();
+                showToast('✅ 復元完了');
+                switchScreen('home');
+            } catch (e) {
+                showToast('❌ ' + e.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+        document.getElementById('export-btn').addEventListener('click', () => {
+            const data = StorageManager.exportData();
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `vocabmaster_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('✅ エクスポート完了');
+        });
+
+        // インポート
+        document.getElementById('import-btn').addEventListener('click', () => {
+            const jsonStr = document.getElementById('import-data').value.trim();
+            if (!jsonStr) return showToast('JSONデータを貼り付けてください');
+
+            if (StorageManager.importData(jsonStr)) {
+                showToast('✅ インポート完了');
+                switchScreen('home');
+            } else {
+                showToast('❌ インポートに失敗しました');
+            }
+        });
+
+        // データ削除
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            if (confirm('全データを削除しますか？この操作は取り消せません。')) {
+                StorageManager.clearAllData();
+                showToast('全データを削除しました');
+                switchScreen('home');
+            }
+        });
+    }
+
+    // =============================================
+    // ユーティリティ
+    // =============================================
+    function showLoading(show) {
+        document.getElementById('loading-overlay').classList.toggle('hidden', !show);
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.remove('hidden');
+        toast.classList.add('show');
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }, 2500);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    return { init, switchScreen };
+})();
+
+// 起動
+document.addEventListener('DOMContentLoaded', App.init);
+</script>
+</body>
+</html>

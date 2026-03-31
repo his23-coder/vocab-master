@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="VocabMaster - 忘却曲線に基づいた英語学習アプリ">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VocabMaster">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <title>VocabMaster</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1 id="screen-title">VocabMaster</h1>
+            <button id="settings-btn" class="icon-btn" aria-label="設定"><i class="fas fa-cog"></i></button>
+        </header>
+
+        <main id="main-content">
+            <div id="screen-container"></div>
+        </main>
+
+        <nav id="bottom-nav" aria-label="メインナビゲーション">
+            <button class="nav-item active" data-screen="home" id="nav-home">
+                <i class="fas fa-house"></i>
+                <span>ホーム</span>
+            </button>
+            <button class="nav-item" data-screen="input" id="nav-input">
+                <i class="fas fa-plus-circle"></i>
+                <span>入力</span>
+            </button>
+            <button class="nav-item" data-screen="confirm" id="nav-confirm">
+                <i class="fas fa-book-open"></i>
+                <span>確認</span>
+            </button>
+            <button class="nav-item" data-screen="test" id="nav-test">
+                <i class="fas fa-vial"></i>
+                <span>テスト</span>
+            </button>
+            <button class="nav-item" data-screen="review" id="nav-review">
+                <i class="fas fa-rotate"></i>
+                <span>復習</span>
+            </button>
+        </nav>
+
+        <div id="loading-overlay" class="hidden">
+            <div class="loader"></div>
+            <p>AI取得中...</p>
+        </div>
+
+        <div id="toast" class="hidden"></div>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/gdrive.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
