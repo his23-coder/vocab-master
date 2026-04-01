@@ -68,8 +68,30 @@ const App = (() => {
     // =============================================
     function renderHomeScreen(container) {
         const stats = StorageManager.getStats();
+        const streakInfo = StorageManager.getStreakInfo();
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        const calHtml = streakInfo.week.map(d => `
+            <div class="cal-day">
+                <span class="cal-label">${d.day}</span>
+                <span class="cal-dot${d.active ? ' active' : ''}${d.date === todayStr ? ' today' : ''}">
+                    ${d.active ? '✓' : ''}
+                </span>
+            </div>
+        `).join('');
 
         container.innerHTML = `
+            <div class="streak-card">
+                <div class="streak-header">
+                    <span class="streak-fire">${streakInfo.streak > 0 ? '🔥' : '💤'}</span>
+                    <div>
+                        <div class="streak-number">${streakInfo.streak}</div>
+                        <div class="streak-label">日連続</div>
+                    </div>
+                </div>
+                <div class="mini-calendar">${calHtml}</div>
+            </div>
+
             <div class="section-title">学習状況</div>
             <div class="stat-grid">
                 <div class="stat-card primary">
@@ -177,6 +199,10 @@ const App = (() => {
                         <input type="text" id="edit-meaning">
                     </div>
                     <div class="input-group">
+                        <label>形態素</label>
+                        <input type="text" id="edit-origin" placeholder="例: un(否定)-believe(信じる)-able(できる)">
+                    </div>
+                    <div class="input-group">
                         <label>同義語（語句(意味), ...）</label>
                         <input type="text" id="edit-synonyms" placeholder="例: coherence(一貫性), uniformity(統一)">
                     </div>
@@ -229,6 +255,11 @@ const App = (() => {
                 document.getElementById('edit-derivatives').value = details.derivatives;
                 document.getElementById('edit-example').value = details.example ? `${details.example.en}\n(${details.example.ja})` : '';
 
+                // 形態素を自動セット
+                if (details.origin) {
+                    document.getElementById('edit-origin').value = details.origin;
+                }
+
                 // 熟語かどうかを自動判定
                 if (term.includes(' ')) {
                     document.getElementById('edit-type').value = 'phrase';
@@ -280,6 +311,7 @@ const App = (() => {
                 type: document.getElementById('edit-type').value,
                 term: term,
                 meaning: document.getElementById('edit-meaning').value,
+                origin: document.getElementById('edit-origin').value,
                 synonyms: parsePairs(synonymsStr),
                 antonyms: parsePairs(antonymsStr),
                 derivatives: document.getElementById('edit-derivatives').value,
@@ -347,7 +379,7 @@ const App = (() => {
             let html = '';
             for (let i = 0; i < parts; i++) {
                 const items = StorageManager.getItemsByPart(type, i);
-                const start = i * 20 + 1;
+                const start = i * 100 + 1;
                 const end = start + items.length - 1;
                 html += `
                     <div class="part-card" data-type="${type}" data-part="${i}" style="animation-delay: ${i * 0.06}s;">
@@ -361,20 +393,216 @@ const App = (() => {
             }
             listContainer.innerHTML = html;
 
-            // パートクリックイベント
             listContainer.querySelectorAll('.part-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const t = card.dataset.type;
                     const p = parseInt(card.dataset.part, 10);
-                    startStudy(t, p);
+                    showSections(t, p);
                 });
             });
         }
 
         tabWord.addEventListener('click', () => showParts('word'));
         tabPhrase.addEventListener('click', () => showParts('phrase'));
-
         showParts('word');
+    }
+
+    // --- セクション一覧（パートの中身）---
+    function showSections(type, partIndex) {
+        const container = document.getElementById('screen-container');
+        const sections = StorageManager.getSectionCount(type, partIndex);
+        const partItems = StorageManager.getItemsByPart(type, partIndex);
+        const partStart = partIndex * 100 + 1;
+
+        let html = `
+            <button class="back-btn" id="back-to-parts"><i class="fas fa-arrow-left"></i> パート一覧</button>
+            <div class="section-title">Part ${partIndex + 1}（${partStart}〜${partStart + partItems.length - 1}）</div>
+        `;
+
+        for (let s = 0; s < sections; s++) {
+            const sItems = StorageManager.getSectionItems(type, partIndex, s);
+            const sStart = partStart + s * 20;
+            const sEnd = sStart + sItems.length - 1;
+            html += `
+                <div class="section-card" data-section="${s}" style="animation-delay: ${s * 0.04}s;">
+                    <div class="part-info">
+                        <div class="part-name" style="font-size:0.9rem;">Section ${s + 1}</div>
+                        <div class="part-range">${sStart} 〜 ${sEnd}（${sItems.length}語）</div>
+                    </div>
+                    <span class="part-arrow"><i class="fas fa-chevron-right"></i></span>
+                </div>
+            `;
+        }
+
+        // リスト管理ボタン
+        html += `
+            <button class="btn-outline mt-16" style="width:100%;" id="list-manage-btn">
+                <i class="fas fa-list"></i> このパートのリスト管理
+            </button>
+        `;
+
+        container.innerHTML = html;
+
+        document.getElementById('back-to-parts').addEventListener('click', () => switchScreen('confirm'));
+
+        container.querySelectorAll('.section-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const s = parseInt(card.dataset.section, 10);
+                const items = StorageManager.getSectionItems(type, partIndex, s);
+                currentData = items;
+                currentIndex = 0;
+                showFlashcard();
+            });
+        });
+
+        document.getElementById('list-manage-btn').addEventListener('click', () => {
+            showItemListView(type, partIndex);
+        });
+    }
+
+    // --- リスト管理ビュー（編集・削除）---
+    function showItemListView(type, partIndex) {
+        const container = document.getElementById('screen-container');
+        const items = StorageManager.getItemsByPart(type, partIndex);
+        const partStart = partIndex * 100 + 1;
+
+        let html = `
+            <button class="back-btn" id="back-to-sections"><i class="fas fa-arrow-left"></i> セクション一覧</button>
+            <div class="section-title">Part ${partIndex + 1} リスト管理（${items.length}語）</div>
+        `;
+
+        items.forEach((item, idx) => {
+            html += `
+                <div class="item-list-row" style="animation-delay: ${idx * 0.02}s;">
+                    <div class="item-list-info">
+                        <div class="item-list-term">${partStart + idx}. ${escapeHtml(item.term)}</div>
+                        <div class="item-list-meaning">
+                            ${escapeHtml(item.meaning)}
+                            ${item.origin ? `<br><span style="color:var(--text-3); font-size: 0.65rem;">形態素: ${escapeHtml(item.origin)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="item-list-actions">
+                        <button class="item-action-btn edit-item-btn" data-id="${item.id}" title="編集">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button class="item-action-btn danger delete-item-btn" data-id="${item.id}" title="削除">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        document.getElementById('back-to-sections').addEventListener('click', () => {
+            showSections(type, partIndex);
+        });
+
+        container.querySelectorAll('.edit-item-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = StorageManager.getItem(btn.dataset.id);
+                if (item) showEditModal(item, () => showItemListView(type, partIndex));
+            });
+        });
+
+        container.querySelectorAll('.delete-item-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (confirm('この単語を削除しますか？')) {
+                    StorageManager.deleteItem(btn.dataset.id);
+                    showToast('削除しました');
+                    showItemListView(type, partIndex);
+                }
+            });
+        });
+    }
+
+    // --- 編集モーダル ---
+    function showEditModal(item, onSaveCallback) {
+        const formatPairs = (arr) => {
+            if (!arr || arr.length === 0) return '';
+            return arr.map(a => typeof a === 'string' ? a : `${a.word}(${a.ja})`).join(', ');
+        };
+        const formatExample = (ex) => {
+            if (!ex) return '';
+            if (typeof ex === 'string') return ex;
+            return ex.ja ? `${ex.en}\n(${ex.ja})` : ex.en;
+        };
+
+        const overlay = document.createElement('div');
+        overlay.className = 'edit-modal-overlay';
+        overlay.innerHTML = `
+            <div class="edit-modal">
+                <h3><i class="fas fa-pen-to-square"></i> 「${escapeHtml(item.term)}」を編集</h3>
+                <div class="input-group">
+                    <label>意味</label>
+                    <input type="text" id="modal-meaning" value="${escapeHtml(item.meaning)}">
+                </div>
+                <div class="input-group">
+                    <label>形態素</label>
+                    <input type="text" id="modal-origin" value="${escapeHtml(item.origin || '')}">
+                </div>
+                <div class="input-group">
+                    <label>同義語</label>
+                    <input type="text" id="modal-synonyms" value="${escapeHtml(formatPairs(item.synonyms))}">
+                </div>
+                <div class="input-group">
+                    <label>対義語</label>
+                    <input type="text" id="modal-antonyms" value="${escapeHtml(formatPairs(item.antonyms))}">
+                </div>
+                <div class="input-group">
+                    <label>派生語</label>
+                    <textarea id="modal-derivatives" rows="2">${escapeHtml(item.derivatives || '')}</textarea>
+                </div>
+                <div class="input-group">
+                    <label>例文</label>
+                    <textarea id="modal-example" rows="2">${escapeHtml(formatExample(item.example))}</textarea>
+                </div>
+                <div class="flex-row">
+                    <button class="btn-outline flex-1" id="modal-cancel">キャンセル</button>
+                    <button class="btn-primary flex-1" id="modal-save">保存</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('modal-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+        document.getElementById('modal-save').addEventListener('click', () => {
+            const parsePairs = (str) => {
+                if (!str.trim()) return [];
+                return str.split(',').map(s => {
+                    const match = s.trim().match(/^(.*?)(?:\((.*?)\))?$/);
+                    return match ? { word: match[1].trim(), ja: match[2] ? match[2].trim() : '' } : null;
+                }).filter(Boolean);
+            };
+            const parseExample = (str) => {
+                const s = str.trim();
+                if (!s) return null;
+                const lines = s.split('\n');
+                let en = lines[0].trim();
+                let ja = lines.length > 1 ? lines[1].replace(/^\(|\)$/g, '').trim() : '';
+                if (lines.length === 1 && en.includes('(')) {
+                    const m = en.match(/^(.*?)\((.*?)\)$/);
+                    if (m) { en = m[1].trim(); ja = m[2].trim(); }
+                }
+                return { en, ja };
+            };
+
+            item.meaning = document.getElementById('modal-meaning').value;
+            item.origin = document.getElementById('modal-origin').value;
+            item.synonyms = parsePairs(document.getElementById('modal-synonyms').value);
+            item.antonyms = parsePairs(document.getElementById('modal-antonyms').value);
+            item.derivatives = document.getElementById('modal-derivatives').value;
+            item.example = parseExample(document.getElementById('modal-example').value);
+
+            StorageManager.saveItem(item);
+            overlay.remove();
+            showToast('✅ 更新しました');
+            if (onSaveCallback) onSaveCallback();
+        });
     }
 
     function startStudy(type, partIndex) {
@@ -392,8 +620,8 @@ const App = (() => {
                 <div class="result-card">
                     <div style="font-size: 3rem; margin-bottom: 12px;">🎉</div>
                     <h2 style="color: var(--text-primary); margin-bottom: 8px;">学習完了！</h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 24px;">このパートの確認が終わりました。</p>
-                    <button class="btn-primary" id="back-to-parts-btn">パート一覧に戻る</button>
+                    <p style="color: var(--text-secondary); margin-bottom: 24px;">このセクションの確認が終わりました。</p>
+                    <button class="btn-primary" id="back-to-parts-btn">一覧に戻る</button>
                 </div>
             `;
             document.getElementById('back-to-parts-btn').addEventListener('click', () => switchScreen('confirm'));
@@ -424,6 +652,10 @@ const App = (() => {
                     </div>
                     <div class="flashcard-back">
                         <div class="word-meaning">${escapeHtml(item.meaning)}</div>
+                        ${item.origin ? `
+                            <div class="detail-label">形態素</div>
+                            <div class="word-detail">${escapeHtml(item.origin)}</div>
+                        ` : ''}
                         <div class="detail-label">同義語</div>
                         <div class="word-detail">${synHtml}</div>
                         <div class="detail-label">対義語</div>
@@ -449,7 +681,13 @@ const App = (() => {
                     次へ <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
-            <div class="card-counter">${currentIndex + 1} / ${currentData.length}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+                <div class="card-counter" style="margin:0;">${currentIndex + 1} / ${currentData.length}</div>
+                <div style="display:flex; gap:8px;">
+                    <button class="item-action-btn edit-item-btn" id="fc-edit-btn" title="編集"><i class="fas fa-pen"></i></button>
+                    <button class="item-action-btn delete-item-btn danger" id="fc-delete-btn" title="削除"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
         `;
 
         // フラッシュカードのタップ反転
@@ -476,16 +714,49 @@ const App = (() => {
         }
 
         // ナビゲーション
-        document.getElementById('next-btn').addEventListener('click', () => {
-            currentIndex++;
-            showFlashcard();
-        });
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (currentIndex < currentData.length - 1) {
+                    currentIndex++;
+                    showFlashcard();
+                } else {
+                    currentData = [];
+                    showFlashcard();
+                }
+            });
+        }
         document.getElementById('prev-btn').addEventListener('click', () => {
             if (currentIndex > 0) {
                 currentIndex--;
                 showFlashcard();
             }
         });
+
+        const editBtn = document.getElementById('fc-edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showEditModal(item, () => {
+                    currentData[currentIndex] = StorageManager.getItem(item.id);
+                    showFlashcard();
+                });
+            });
+        }
+
+        const delBtn = document.getElementById('fc-delete-btn');
+        if (delBtn) {
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('この単語を削除しますか？')) {
+                    StorageManager.deleteItem(item.id);
+                    showToast('削除しました');
+                    currentData.splice(currentIndex, 1);
+                    if (currentIndex >= currentData.length) currentIndex = Math.max(0, currentData.length - 1);
+                    showFlashcard();
+                }
+            });
+        }
     }
 
     // =============================================
@@ -587,8 +858,14 @@ const App = (() => {
         }
 
         container.innerHTML = `
-            <div class="card-counter" style="margin-top:0; margin-bottom:16px;">
-                ${currentIndex + 1} / ${currentData.length}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div class="card-counter" style="margin:0;">
+                    ${currentIndex + 1} / ${currentData.length}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="item-action-btn edit-item-btn" id="test-edit-btn" title="編集"><i class="fas fa-pen"></i></button>
+                    <button class="item-action-btn delete-item-btn danger" id="test-delete-btn" title="削除"><i class="fas fa-trash"></i></button>
+                </div>
             </div>
             <div class="test-card" id="reveal-card">
                 <div class="word-main" style="margin-bottom: 8px;">${escapeHtml(item.term)}</div>
@@ -598,7 +875,11 @@ const App = (() => {
                 <p id="reveal-hint" class="text-sm text-muted">タップで正解を表示</p>
                 <div id="answer-area" class="hidden" style="width:100%;">
                     <div class="word-meaning mt-12">${escapeHtml(item.meaning)}</div>
-                    ${item.example ? `<div class="word-example mt-8">${escapeHtml(item.example)}</div>` : ''}
+                    ${item.origin ? `
+                        <div class="detail-label mt-8" style="text-align: center;">形態素</div>
+                        <div class="word-detail" style="text-align: center;">${escapeHtml(item.origin)}</div>
+                    ` : ''}
+                    ${item.example ? `<div class="word-example mt-8">${escapeHtml(typeof item.example === 'string' ? item.example : item.example.en)}</div>` : ''}
                     <div class="test-buttons mt-20">
                         <button class="btn-success flex-1" id="btn-correct">
                             <i class="fas fa-circle-check"></i> 正解
@@ -632,6 +913,7 @@ const App = (() => {
         document.getElementById('btn-correct').addEventListener('click', (e) => {
             e.stopPropagation();
             StorageManager.recordCorrect(item.id);
+            StorageManager.recordStreak();
             testResults.correct++;
             revealCard.classList.add('animate-success');
             setTimeout(() => {
@@ -644,6 +926,7 @@ const App = (() => {
         document.getElementById('btn-incorrect').addEventListener('click', (e) => {
             e.stopPropagation();
             StorageManager.recordIncorrect(item.id);
+            StorageManager.recordStreak();
             testResults.incorrect++;
             revealCard.classList.add('animate-danger');
             setTimeout(() => {
@@ -651,6 +934,31 @@ const App = (() => {
                 showTestCard();
             }, 350);
         });
+
+        const tEditBtn = document.getElementById('test-edit-btn');
+        if (tEditBtn) {
+            tEditBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showEditModal(item, () => {
+                    currentData[currentIndex] = StorageManager.getItem(item.id);
+                    showTestCard();
+                });
+            });
+        }
+
+        const tDelBtn = document.getElementById('test-delete-btn');
+        if (tDelBtn) {
+            tDelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('この単語を削除しますか？')) {
+                    StorageManager.deleteItem(item.id);
+                    showToast('削除しました');
+                    currentData.splice(currentIndex, 1);
+                    if (currentIndex >= currentData.length) currentIndex = Math.max(0, currentData.length - 1);
+                    showTestCard();
+                }
+            });
+        }
     }
 
     // =============================================

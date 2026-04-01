@@ -59,6 +59,7 @@ const StorageManager = (() => {
         if (item.reviewStage === undefined) item.reviewStage = 0;
         if (item.isWeak === undefined) item.isWeak = false;
         if (item.updatedAt === undefined) item.updatedAt = Date.now();
+        if (item.origin === undefined) item.origin = item.morphology || '';
         return item;
     }
 
@@ -112,20 +113,34 @@ const StorageManager = (() => {
         return getAllItems().filter(i => i.isWeak);
     }
 
-    // --- パート管理 (20個ずつ) ---
+    // --- パート管理 (100個/パート, 20個/セクション) ---
+    const PART_SIZE = 100;
+    const SECTION_SIZE = 20;
+
     function getItemsByType(type) {
         return getAllItems().filter(i => i.type === type);
     }
 
     function getItemsByPart(type, partIndex) {
         const allItems = getItemsByType(type);
-        const start = partIndex * 20;
-        return allItems.slice(start, start + 20);
+        const start = partIndex * PART_SIZE;
+        return allItems.slice(start, start + PART_SIZE);
     }
 
     function getPartCount(type) {
         const count = getItemsByType(type).length;
-        return Math.ceil(count / 20);
+        return Math.ceil(count / PART_SIZE);
+    }
+
+    function getSectionItems(type, partIndex, sectionIndex) {
+        const partItems = getItemsByPart(type, partIndex);
+        const start = sectionIndex * SECTION_SIZE;
+        return partItems.slice(start, start + SECTION_SIZE);
+    }
+
+    function getSectionCount(type, partIndex) {
+        const partItems = getItemsByPart(type, partIndex);
+        return Math.ceil(partItems.length / SECTION_SIZE);
     }
 
     // --- 強制復習アルゴリズム ---
@@ -265,6 +280,71 @@ const StorageManager = (() => {
         localStorage.removeItem(KEYS.ITEMS);
     }
 
+    // --- ストリーク（連続記録）---
+    const STREAK_KEY = 'vocabMaster_streak';
+
+    function recordStreak() {
+        const today = new Date().toISOString().slice(0, 10);
+        let days = [];
+        try {
+            days = JSON.parse(localStorage.getItem(STREAK_KEY)) || [];
+        } catch (e) { days = []; }
+        if (!days.includes(today)) {
+            days.push(today);
+            // 過去90日分だけ保持
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 90);
+            days = days.filter(d => d >= cutoff.toISOString().slice(0, 10));
+            localStorage.setItem(STREAK_KEY, JSON.stringify(days));
+        }
+    }
+
+    function getStreakInfo() {
+        let days = [];
+        try {
+            days = JSON.parse(localStorage.getItem(STREAK_KEY)) || [];
+        } catch (e) { days = []; }
+        days.sort();
+
+        // 連続日数を計算（今日 or 昨日から遡る）
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const todayStr = today.toISOString().slice(0, 10);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+        let streak = 0;
+        let checkDate = days.includes(todayStr) ? new Date(today) : (days.includes(yesterdayStr) ? new Date(yesterday) : null);
+
+        if (checkDate) {
+            while (true) {
+                const ds = checkDate.toISOString().slice(0, 10);
+                if (days.includes(ds)) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // 過去7日間のアクティビティ
+        const week = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const ds = d.toISOString().slice(0, 10);
+            week.push({
+                date: ds,
+                day: ['日','月','火','水','木','金','土'][d.getDay()],
+                active: days.includes(ds)
+            });
+        }
+
+        return { streak, week, activeDays: days };
+    }
+
     // --- ユーティリティ ---
     function generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
@@ -305,10 +385,12 @@ const StorageManager = (() => {
         getAllItems, saveItem, deleteItem, getItem,
         toggleWeak, getWeakItems,
         getItemsByType, getItemsByPart, getPartCount,
+        getSectionItems, getSectionCount,
         recordCorrect, recordIncorrect, getDueItems,
         getStats,
         getSettings, saveSettings,
         exportData, importData, clearAllData,
-        mergeImportedItems
+        mergeImportedItems,
+        recordStreak, getStreakInfo
     };
 })();

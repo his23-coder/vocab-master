@@ -68,6 +68,7 @@ const AIManager = (() => {
             JSON形式:
             {
                 "meaning": "日本語での主な意味（簡潔に）",
+                "origin": "形態素（例: un(否定)-believe(信じる)-able(できる)）。ハイフン繋ぎの形式。分からない場合は空文字",
                 "synonyms": [{"word": "同義語1", "ja": "意味1"}, {"word": "同義語2", "ja": "意味2"}],
                 "antonyms": [{"word": "対義語1", "ja": "意味1"}, {"word": "対義語2", "ja": "意味2"}],
                 "derivatives": "派生語や品詞変化（例: 名詞形:xxx, 形容詞形:yyy, 副詞形:zzz）",
@@ -142,6 +143,7 @@ const AIManager = (() => {
 
                 return {
                     meaning: parsed.meaning || '',
+                    origin: parsed.origin || '',
                     synonyms: normalizePairs(parsed.synonyms),
                     antonyms: normalizePairs(parsed.antonyms),
                     derivatives: parsed.derivatives || '',
