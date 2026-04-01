@@ -199,7 +199,7 @@ const App = (() => {
                         <input type="text" id="edit-meaning">
                     </div>
                     <div class="input-group">
-                        <label>形態素</label>
+                        <label>形態素 / 成り立ち</label>
                         <input type="text" id="edit-origin" placeholder="例: un(否定)-believe(信じる)-able(できる)">
                     </div>
                     <div class="input-group">
@@ -478,7 +478,7 @@ const App = (() => {
                         <div class="item-list-term">${partStart + idx}. ${escapeHtml(item.term)}</div>
                         <div class="item-list-meaning">
                             ${escapeHtml(item.meaning)}
-                            ${item.origin ? `<br><span style="color:var(--text-3); font-size: 0.65rem;">形態素: ${escapeHtml(item.origin)}</span>` : ''}
+                            ${item.origin ? `<br><span style="color:var(--text-3); font-size: 0.65rem;">${item.type === 'phrase' ? '構造・成り立ち' : '形態素'}: ${escapeHtml(item.origin)}</span>` : ''}
                         </div>
                     </div>
                     <div class="item-list-actions">
@@ -533,13 +533,18 @@ const App = (() => {
         overlay.className = 'edit-modal-overlay';
         overlay.innerHTML = `
             <div class="edit-modal">
-                <h3><i class="fas fa-pen-to-square"></i> 「${escapeHtml(item.term)}」を編集</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <h3 style="margin:0;"><i class="fas fa-pen-to-square"></i> 「${escapeHtml(item.term)}」</h3>
+                    <button class="btn-primary" id="modal-auto-fetch-btn" style="padding:4px 10px; font-size:0.8rem; width:auto;">
+                        <i class="fas fa-wand-magic-sparkles"></i> AI再取得
+                    </button>
+                </div>
                 <div class="input-group">
                     <label>意味</label>
                     <input type="text" id="modal-meaning" value="${escapeHtml(item.meaning)}">
                 </div>
                 <div class="input-group">
-                    <label>形態素</label>
+                    <label>形態素 / 成り立ち</label>
                     <input type="text" id="modal-origin" value="${escapeHtml(item.origin || '')}">
                 </div>
                 <div class="input-group">
@@ -569,6 +574,34 @@ const App = (() => {
 
         document.getElementById('modal-cancel').addEventListener('click', () => overlay.remove());
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+        const modalAutoFetchBtn = document.getElementById('modal-auto-fetch-btn');
+        if (modalAutoFetchBtn) {
+            modalAutoFetchBtn.addEventListener('click', async () => {
+                showLoading(true);
+                try {
+                    const apiKey = StorageManager.getSettings().apiKey;
+                    if (!apiKey) {
+                        showErrorToast('設定からAPIキーを登録してください');
+                        showLoading(false);
+                        return;
+                    }
+                    const details = await window.ai.fetchWordDetails(item.term, apiKey);
+                    
+                    document.getElementById('modal-meaning').value = details.meaning || '';
+                    if (details.origin) document.getElementById('modal-origin').value = details.origin;
+                    if (details.synonyms && details.synonyms.length > 0) document.getElementById('modal-synonyms').value = formatPairs(details.synonyms);
+                    if (details.antonyms && details.antonyms.length > 0) document.getElementById('modal-antonyms').value = formatPairs(details.antonyms);
+                    if (details.derivatives) document.getElementById('modal-derivatives').value = details.derivatives;
+                    if (details.example) document.getElementById('modal-example').value = `${details.example.en}\n(${details.example.ja})`;
+                    showToast('AI再取得が完了しました');
+                } catch (e) {
+                    showErrorToast('AI取得エラー: ' + e.message);
+                } finally {
+                    showLoading(false);
+                }
+            });
+        }
 
         document.getElementById('modal-save').addEventListener('click', () => {
             const parsePairs = (str) => {
@@ -653,7 +686,7 @@ const App = (() => {
                     <div class="flashcard-back">
                         <div class="word-meaning">${escapeHtml(item.meaning)}</div>
                         ${item.origin ? `
-                            <div class="detail-label">形態素</div>
+                            <div class="detail-label">${item.type === 'phrase' ? '構造・成り立ち' : '形態素'}</div>
                             <div class="word-detail">${escapeHtml(item.origin)}</div>
                         ` : ''}
                         <div class="detail-label">同義語</div>
@@ -876,7 +909,7 @@ const App = (() => {
                 <div id="answer-area" class="hidden" style="width:100%;">
                     <div class="word-meaning mt-12">${escapeHtml(item.meaning)}</div>
                     ${item.origin ? `
-                        <div class="detail-label mt-8" style="text-align: center;">形態素</div>
+                        <div class="detail-label mt-8" style="text-align: center;">${item.type === 'phrase' ? '構造・成り立ち' : '形態素'}</div>
                         <div class="word-detail" style="text-align: center;">${escapeHtml(item.origin)}</div>
                     ` : ''}
                     ${item.example ? `<div class="word-example mt-8">${escapeHtml(typeof item.example === 'string' ? item.example : item.example.en)}</div>` : ''}
