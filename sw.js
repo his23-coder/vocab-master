@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vocabmaster-v12';
+const CACHE_NAME = 'vocabmaster-v13';
 const ASSETS = [
     './',
     './index.html',
@@ -28,8 +28,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    // API呼び出しはキャッシュしない
-    if (e.request.url.includes('generativelanguage.googleapis.com')) return;
+    // APIおよび同期通信はキャッシュしない
+    if (e.request.url.includes('generativelanguage.googleapis.com') ||
+        e.request.url.includes('script.google.com') ||
+        e.request.url.includes('script.googleusercontent.com')) {
+        return;
+    }
 
     e.respondWith(
         caches.match(e.request).then(cached => {
